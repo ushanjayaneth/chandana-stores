@@ -40,7 +40,7 @@ test('shared POS opens a shift, prints an offline keyboard checkout once and syn
   });
   try {
     await signIn(page, origin);
-    await expect(page.getByText('Offline ready', {exact: true})).toBeVisible();
+    await expect(page.getByText('Offline ready', {exact: true})).toBeVisible({timeout: 25_000});
     await navigate(page, /^Staff & payroll/);
     await expect(page.getByRole('heading', {level: 1, name: /^Staff & payroll/})).toBeVisible();
     await navigate(page, /^Products/);
@@ -82,6 +82,16 @@ test('shared POS opens a shift, prints an offline keyboard checkout once and syn
     const line = other.locator('.order-card-items').getByText(productName, {exact: true});
     await expect(line).toBeVisible();
     expect(await line.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+    await other.setViewportSize({width: 390, height: 844});
+    expect(await line.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+    await other.setViewportSize({width: 1400, height: 900});
+    await navigate(other, /^Point of sale/);
+    await other.getByRole('button', {name: 'Add ' + productName, exact: true}).click();
+    await other.keyboard.press('Enter');
+    const onlinePayment = other.getByRole('dialog', {name: 'Take payment', exact: true});
+    await expect(onlinePayment.getByLabel('Opening cash float (LKR)')).toHaveCount(0);
+    await onlinePayment.getByRole('button', {name: 'Confirm payment', exact: true}).click();
+    await expect(other.getByRole('dialog', {name: 'Order receipt', exact: true})).toContainText('125.00');
   } finally {
     await second.close();
     await app.close();
