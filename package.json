@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
-    "@fastify/static": "^10.1.6",
+    "@fastify/static": "^10.1.12",
     "@fontsource-variable/inter": "^5.2.8",
     "@fontsource/noto-sans-sinhala": "^5.2.5",
     "dexie": "^4.2.0",
@@ -44,5 +44,13 @@
     "typescript": "~5.9.3",
     "vite": "^7.1.10",
     "vite-plugin-pwa": "^1.1.0"
+  },
+  "overrides": {
+    "@google-cloud/firestore-api": {
+      "rimraf": "6.1.4"
+    },
+    "workbox-build": {
+      "glob": "14.0.6"
+    }
   }
 }

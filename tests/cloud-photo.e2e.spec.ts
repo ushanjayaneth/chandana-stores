@@ -82,7 +82,7 @@ test('camera and file product photos compress offline, survive reload and sync t
       expect(Buffer.from(photo.data, 'base64').length).toBe(photo.byteLength);
     }
     await page.reload();
-    const localPhoto = page.getByAltText('Offline Photo Product', {exact: true}).first();
+    const localPhoto = page.locator('.product-card').filter({has: page.getByRole('heading', {name: 'Offline Photo Product', exact: true})}).locator('img');
     await expect(localPhoto).toBeVisible(); await expect.poll(() => localPhoto.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
     expect(await page.evaluate(() => navigator.onLine)).toBe(false);
     await context.setOffline(false);
@@ -90,7 +90,7 @@ test('camera and file product photos compress offline, survive reload and sync t
     const mediaRequests: string[] = [];
     remote.on('request', request => {if (request.url().includes('action=media&')) mediaRequests.push(request.url());});
     await remote.goto(origin); await signIn(remote);
-    const remotePhoto = remote.getByAltText('Offline Photo Product', {exact: true}).first();
+    const remotePhoto = remote.locator('.product-card').filter({has: remote.getByRole('heading', {name: 'Offline Photo Product', exact: true})}).locator('img');
     await expect(remotePhoto).toBeVisible(); await expect.poll(() => remotePhoto.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
     expect(mediaRequests.length).toBeGreaterThan(0);
     await remote.getByRole('button', {name: 'Add product', exact: true}).click();
@@ -103,7 +103,7 @@ test('camera and file product photos compress offline, survive reload and sync t
     await phoneDialog.getByRole('button', {name: 'Close dialog', exact: true}).click();
     await installedCache(remote);
     await phone.setOffline(true); await remote.reload();
-    const cachedPhoto = remote.getByAltText('Offline Photo Product', {exact: true}).first();
+    const cachedPhoto = remote.locator('.product-card').filter({has: remote.getByRole('heading', {name: 'Offline Photo Product', exact: true})}).locator('img');
     await expect(cachedPhoto).toBeVisible(); await expect.poll(() => cachedPhoto.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
     expect(errors).toEqual([]);
   } finally {await context.close(); await phone.close(); await app.close();}

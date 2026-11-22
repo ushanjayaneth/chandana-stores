@@ -40,3 +40,51 @@ test('offline staff attendance, advance, loan repayment, salary recovery and pay
  await personRow.getByRole('button',{name:'Pay salary',exact:true}).click();const salary=page.getByRole('dialog',{name:'Pay monthly salary',exact:true});await salary.getByLabel(/^Advance recovery/).fill('5000');await salary.getByLabel(/^Loan recovery/).fill('2000');await salary.getByLabel('Staff payment method',{exact:true}).selectOption('qr');await expect(salary).toContainText('43,000.00');await salary.getByRole('button',{name:'Confirm salary payment',exact:true}).click();await expect(salary).toHaveCount(0);await expect(personRow).toContainText('7,000.00');const saved=await records(page,'payroll');expect(saved).toHaveLength(1);expect(saved[0].net).toBe(4300000);
  const popupPromise=page.waitForEvent('popup');await page.getByRole('button',{name:'Payslip',exact:true}).click();const popup=await popupPromise;await expect(popup.getByRole('heading',{name:'Demo Staff Person',exact:true})).toBeVisible();await expect(popup.locator('body')).toContainText('43,000.00');await popup.close();const downloadPromise=page.waitForEvent('download');await page.getByRole('button',{name:'Export payroll',exact:true}).click();expect((await downloadPromise).suggestedFilename()).toBe('payroll.csv');await page.screenshot({path:'artifacts/retail-staff.png',fullPage:true});
 });
+
+
+test('a purchase refreshes branch cost and a price edit in another tab preserves that cost', async ({page, context}) => {
+  await setup(page);
+  const productName = 'Cream biscuits';
+  const stock = (await records(page, 'inventory')).find(item => item.name === productName);
+  const supplier = (await records(page, 'supplier'))[0];
+  const unitCost = stock.unitCost / 100;
+  const averageCost = unitCost + 10;
+  const format = (amount: number) => amount.toLocaleString('en-LK', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  await nav(page, 'Products');
+  await page.getByRole('button', {name: 'Edit ' + productName, exact: true}).click();
+  const editor = page.getByRole('dialog', {name: 'Edit product', exact: true});
+  await expect(editor.getByLabel('Cost per unit (LKR)', {exact: true})).toHaveValue(String(unitCost));
+
+  const purchasing = await context.newPage();
+  try {
+    await purchasing.goto('/?local=1');
+    await nav(purchasing, 'Purchases & suppliers');
+    await purchasing.getByRole('button', {name: 'Add purchase', exact: true}).click();
+    const purchase = purchasing.getByRole('dialog');
+    await purchase.locator('select[name=supplierId]').selectOption(supplier.id);
+    await purchase.getByLabel('Invoice number', {exact: true}).fill('RESTOCK-COST-TEST');
+    await purchase.locator('.purchase-form-lines select').selectOption(stock.id);
+    await purchase.getByLabel('Quantity', {exact: true}).fill(String(stock.quantity));
+    await purchase.getByLabel('Unit price', {exact: true}).fill(String(unitCost + 20));
+    await purchase.getByRole('button', {name: 'Receive purchase', exact: true}).click();
+    await expect(purchase).toHaveCount(0);
+
+    await expect(editor.getByLabel('Cost per unit (LKR)', {exact: true})).toHaveValue(String(averageCost));
+    await editor.getByLabel('Selling price (LKR)', {exact: true}).fill('195');
+    await editor.getByRole('button', {name: 'Save product', exact: true}).click();
+    await expect(editor).toHaveCount(0);
+    const row = page.getByRole('row').filter({hasText: productName});
+    await expect(row.getByRole('cell', {name: 'Rs. ' + format(averageCost), exact: true})).toBeVisible();
+    await expect(row.getByRole('cell', {name: 'Rs. 195.00', exact: true})).toBeVisible();
+    const updatedStock = (await records(page, 'inventory')).find(item => item.id === stock.id);
+    expect(updatedStock.unitCost).toBe(averageCost * 100);
+    expect(updatedStock.quantity).toBe(stock.quantity * 2);
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', {name: 'Export', exact: true}).click();
+    const csv = readFileSync((await (await download).path())!, 'utf8');
+    const line = csv.split('\n').find(row => row.startsWith('"Cream biscuits",'));
+    expect(line?.split(',')[6]).toBe('"' + averageCost + '"');
+  } finally {
+    await purchasing.close();
+  }
+});

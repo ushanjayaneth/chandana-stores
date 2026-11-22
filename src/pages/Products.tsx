@@ -1,4 +1,5 @@
 import {saleUnits} from '../../shared/retail';
+import {productCost} from '../../shared/costing';
 import {
   useEffect,
   useRef,
@@ -286,7 +287,9 @@ export function ProductDialog({
     item ? Boolean(linkedStock) : true,
   );
   const [stockUnit, setStockUnit] = useState(product?.saleUnit || linkedStock?.unit || "pcs");
-  const [expiryDate,setExpiryDate]=useState(linkedStock?.expiryDate || "");
+  const [enteredExpiry, setExpiryDate] = useState<string | null>(null);
+  const expiryDate = enteredExpiry ?? linkedStock?.expiryDate ?? "";
+  const [minimumEdited, setMinimumEdited] = useState(false);
   const [categoryDialog, setCategoryDialog] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -295,7 +298,9 @@ export function ProductDialog({
   const [image, setImage] = useState(product?.image || "");
   const [photoBusy, setPhotoBusy] = useState(false);
   const [sellingPrice, setSellingPrice] = useState(product ? String(product.price / 100) : "");
-  const [purchaseCost, setPurchaseCost] = useState(String((linkedStock?.unitCost ?? product?.cost ?? 0) / 100));
+  const [enteredCost, setPurchaseCost] = useState<string | null>(null);
+  const currentCost = (stockMode === "prepared" ? linkedStock?.unitCost : undefined) ?? product?.cost ?? 0;
+  const purchaseCost = enteredCost ?? String(currentCost / 100);
   const previewPrice = Math.round(Number(sellingPrice || 0) * 100);
   const previewCost = Math.round(Number(purchaseCost || 0) * 100);
 
@@ -312,7 +317,7 @@ export function ProductDialog({
       description: text("description"),
       categoryId: selectedCategory,
       price: cents("price"),
-      cost: cents("cost"),
+      ...(!item || enteredCost !== null || stockMode !== product?.stockMode ? {cost: previewCost} : {}),
       wholesalePrice:cents("wholesalePrice"),
       image: image.trim() || "/images/grocery/default.jpg",
       available: fields.get("enabled") === "on",
@@ -321,7 +326,7 @@ export function ProductDialog({
       preparationMinutes: Number(fields.get("preparationMinutes") || 0),
       barcode: text("barcode"),
       sku: text("sku").toUpperCase(),
-      reorderLevel: text("minimum") === "" ? 5 : Number(text("minimum")),
+      ...(!item || minimumEdited ? {reorderLevel: text("minimum") === "" ? 5 : Number(text("minimum"))} : {}),
     };
     if (!selectedCategory) {
       setError("Choose or create a category first.");
@@ -344,22 +349,24 @@ export function ProductDialog({
         const requested = Number(quantity);
         if (!Number.isFinite(requested) || requested < 0)
           throw new Error("Enter a valid, non-negative stock quantity.");
-        if (linkedStock && (quantityEdited || linkedStock.minimum !== payload.reorderLevel || linkedStock.unitCost !== payload.cost || (linkedStock.expiryDate || "") !== expiryDate)) {
-          await mutate(
+        if (linkedStock) {
+          const changes = {
+            ...(quantityEdited ? {quantity: requested, expectedQuantity: openingQuantity.current} : {}),
+            ...(minimumEdited && linkedStock.minimum !== payload.reorderLevel ? {minimum: payload.reorderLevel} : {}),
+            ...(enteredCost !== null && linkedStock.unitCost !== previewCost ? {unitCost: previewCost} : {}),
+            ...(enteredExpiry !== null && (linkedStock.expiryDate || "") !== expiryDate ? {expiryDate} : {}),
+          };
+          if (Object.keys(changes).length) await mutate(
             `/inventory/${linkedStock.id}`,
             {
               commandId: stockRequestId,
               branchId,
-              quantity: quantityEdited ? requested : linkedStock.quantity,
-              minimum: payload.reorderLevel,
-              unitCost: payload.cost,
-              expiryDate,
-              expectedQuantity: quantityEdited ? openingQuantity.current : linkedStock.quantity,
-              reason: "Product stock count updated",
+              ...changes,
+              reason: "Product stock details updated",
             },
             "PATCH",
           );
-        } else if (!linkedStock) {
+        } else {
           await mutate("/inventory", {
             commandId: stockRequestId,
             branchId,
@@ -368,8 +375,8 @@ export function ProductDialog({
             unit: stockUnit,
             expiryDate,
             quantity: requested,
-            minimum: payload.reorderLevel,
-            unitCost: payload.cost,
+            minimum: payload.reorderLevel ?? product?.reorderLevel ?? 5,
+            unitCost: previewCost,
             menuItemId: result.item.id,
             supplierId: null,
           });
@@ -510,6 +517,7 @@ export function ProductDialog({
               <input
                 className="input"
                 name="minimum"
+                onChange={() => setMinimumEdited(true)}
                 aria-label="Low stock alert at"
                 type="number"
                 min="0"
@@ -647,6 +655,7 @@ export default function Products() {
   const products = data.menu as Product[];
   const stockStateFor = (product: Product) =>
     productStockState(product, data.inventory, data.recipes, branchId);
+  const unitCostFor = (product: Product) => productCost(product, data.inventory, data.recipes, branchId).unitCost;
   const lowStock = products.filter((product) => stockStateFor(product).low);
   const filtered = products.filter((product) => {
     const stockState = stockStateFor(product);
@@ -686,7 +695,7 @@ export default function Products() {
           product.barcode || "",
           product.price / 100,
           product.wholesalePrice ? product.wholesalePrice / 100 : "Use retail",
-          product.cost / 100,
+          unitCostFor(product) / 100,
           stock.quantity ?? "",
           stock.unit,
           product.stockMode === "untracked" ? "" : stock.threshold,
@@ -876,7 +885,7 @@ export default function Products() {
                     <td>
                       <strong>{money(product.price)}</strong>
                     </td>
-                    <td>{money(product.cost)}</td>
+                    <td>{money(unitCostFor(product))}</td>
                     <td>
                       {stock.quantity !== null ? (
                         <div
