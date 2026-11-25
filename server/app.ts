@@ -19,6 +19,7 @@ import { productCost, weightedUnitCost } from '../shared/costing';
 import { productStockState } from '../shared/stock';
 import {registerStaffRoutes} from './staff';
 import {createMonitorHandler,type MonitorOptions} from './monitor/handler';
+import {findProductPhotos} from './product-photos.js';
 
 const command = z.string().min(8).max(160);
 const id = z.string().min(1).max(160);
@@ -145,6 +146,11 @@ export async function createApp(options: AppOptions = {}) {
     return reply.code(status).send({error:status===500?'The operation could not be saved. Please try again.':httpError.message??'Invalid request.',code:status===500?'INTERNAL_ERROR':'INVALID_REQUEST'});
   });
   app.get('/api/health',async()=>({ok:true,service:'retail-pos-branch-hub',database:'sqlite',time:now()}));
+  app.get<{Querystring: {q?: string; barcode?: string}}>('/api/product-photos', async (request, reply) => {
+    const {q, barcode} = request.query;
+    try {return {photos: await findProductPhotos({query: typeof q === "string" ? q : "", barcode: typeof barcode === "string" ? barcode : ""})};}
+    catch {return reply.code(503).send({error: "Online photo catalogs are temporarily unavailable."});}
+  });
   const monitor=createMonitorHandler(options.monitor);
   app.all('/api/cloud',{bodyLimit:700000},async(request,reply)=>{
     const headers=new Headers();for(const [key,value] of Object.entries(request.headers))if(value!==undefined)headers.set(key,Array.isArray(value)?value.join(','):value);

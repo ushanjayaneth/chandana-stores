@@ -1,3 +1,4 @@
+import type {CatalogPhotoCredit} from '../../shared/product-photo-catalog';
 import {MAX_MEDIA_BYTES, assertMediaPayload, imageDimensions, type MediaInput, type MediaResponse, type ProductImageMime} from '../../shared/media';
 import {api} from './api';
 import {commandId} from './format';
@@ -16,7 +17,7 @@ async function fileBase64(blob: Blob): Promise<string> {
   for (let offset = 0; offset < bytes.length; offset += 8192) binary += String.fromCharCode(...bytes.subarray(offset, offset + 8192));
   return btoa(binary);
 }
-async function preparePhoto(file: File): Promise<MediaInput & {commandId: string}> {
+async function preparePhoto(file: File, catalogCredit?: CatalogPhotoCredit): Promise<MediaInput & {commandId: string}> {
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) throw new Error('Choose a JPEG, PNG or WebP photo.');
   if (file.size > 25_000_000 || file.size < 1) throw new Error('Choose a photo smaller than 25 MB.');
   const original = new Uint8Array(await file.arrayBuffer());
@@ -48,7 +49,7 @@ async function preparePhoto(file: File): Promise<MediaInput & {commandId: string
       draw(); photo = await canvasBlob(canvas, 0.7);
     }
     if (photo.size > uploadTargetBytes) throw new Error('The photo could not be compressed for cloud storage. Choose a smaller image.');
-    const payload = {id: `media-${crypto.randomUUID()}`, mime: 'image/jpeg' as const, data: await fileBase64(photo), byteLength: photo.size, width: canvas.width, height: canvas.height};
+    const payload = {id: `media-${crypto.randomUUID()}`, mime: 'image/jpeg' as const, data: await fileBase64(photo), byteLength: photo.size, width: canvas.width, height: canvas.height, ...(catalogCredit ? {catalogCredit} : {})};
     assertMediaPayload(payload);
     return {...payload, commandId: commandId()};
   } finally {
@@ -58,9 +59,9 @@ async function preparePhoto(file: File): Promise<MediaInput & {commandId: string
 }
 
 /** A retry of the same file uses the same immutable image and command IDs. */
-export async function compressFile(file: File): Promise<string> {
+export async function compressFile(file: File, catalogCredit?: CatalogPhotoCredit): Promise<string> {
   let prepared = pendingFiles.get(file);
-  if (!prepared) {prepared = preparePhoto(file); pendingFiles.set(file, prepared);}
+  if (!prepared) {prepared = preparePhoto(file, catalogCredit); pendingFiles.set(file, prepared);}
   let input: Awaited<typeof prepared>;
   try {input = await prepared;} catch (error) {pendingFiles.delete(file); throw error;}
   const response = await api<MediaResponse>('/media', input);

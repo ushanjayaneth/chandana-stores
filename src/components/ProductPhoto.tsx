@@ -1,3 +1,4 @@
+import {photoCatalogs, type CatalogPhotoCredit} from '../../shared/product-photo-catalog';
 import {useEffect, useState, type ImgHTMLAttributes} from 'react';
 import {base64ToBytes, mediaIdFromReference, type MediaRecord} from '../../shared/media';
 import {localDb} from '../lib/local/db';
@@ -6,7 +7,7 @@ import {getCloudOfflineReplica} from '../lib/cloud-offline';
 import {sharedCloudSource} from '../lib/cloud-shared';
 import {cloudRequest} from '../lib/cloud-sync';
 
-interface CachedPhoto {url: string; users: number; accessed: number}
+interface CachedPhoto {url: string; users: number; accessed: number; credit?: CatalogPhotoCredit}
 const cache = new Map<string, CachedPhoto>();
 const pending = new Map<string, Promise<CachedPhoto | null>>();
 const retryAfter = new Map<string, number>();
@@ -37,7 +38,7 @@ async function photoSource(id: string, sourceId: string | null, retry = false): 
       }
       if (!record) return null;
       const bytes = base64ToBytes(record.data);
-      const entry = {url: URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], {type: record.mime})), users: 0, accessed: Date.now()};
+      const entry = {url: URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], {type: record.mime})), users: 0, accessed: Date.now(), credit: record.catalogCredit};
       // Reserve consumers before trimming. A newly created 33rd photo must not
       // have its URL revoked while its first mounted consumer is still awaiting it.
       cache.set(key, entry); return entry;
@@ -50,12 +51,12 @@ async function photoSource(id: string, sourceId: string | null, retry = false): 
 }
 
 /** Uploaded images stay available from the device database while offline. */
-export function ProductPhoto({src = '', alt = '', ...props}: ImgHTMLAttributes<HTMLImageElement>) {
+export function ProductPhoto({src = '', alt = '', showCredit = false, ...props}: ImgHTMLAttributes<HTMLImageElement> & {showCredit?: boolean}) {
   const id = mediaIdFromReference(src);
   const sourceId = sharedCloudSource();
   const local = Boolean(id && (sourceId || src.startsWith('local-image:') || isDeviceWorkspace()));
   const reference = `${sourceId ?? 'original-device'}:${src}`;
-  const [resolved, setResolved] = useState<{reference: string; url: string}>();
+  const [resolved, setResolved] = useState<{reference: string; url: string; credit?: CatalogPhotoCredit}>();
   useEffect(() => {
     if (!local || !id) return;
     let active = true;
@@ -69,7 +70,7 @@ export function ProductPhoto({src = '', alt = '', ...props}: ImgHTMLAttributes<H
         if (!entry) return;
         if (!active) {entry.users = Math.max(0, entry.users - 1);trimCache();return;}
         entry.accessed = Date.now(); acquired = entry;
-        setResolved({reference, url: entry.url});
+        setResolved({reference, url: entry.url, credit: entry.credit});
       }).catch(() => {loading = false;if (active) setResolved({reference, url: ''});});
     };
     const online = () => load(true);
@@ -82,6 +83,13 @@ export function ProductPhoto({src = '', alt = '', ...props}: ImgHTMLAttributes<H
   }, [reference, local, id, sourceId]);
   const url = local ? resolved?.reference === reference ? resolved.url : '' : src.replace(bundledIllustration, '/images/grocery/$1.jpg');
   if (!url) return <span className={`product-photo-empty ${props.className ?? ''}`} role="img" aria-label={alt || 'No product photo'} style={props.style} />;
-  return <img {...props} src={url} alt={alt} />;
+  const credit = resolved?.reference === reference ? resolved.credit : undefined;
+  const catalog = credit && photoCatalogs[credit.catalog];
+  const attribution = catalog ? "Photo by " + catalog.name + " contributors, CC BY-SA 3.0, resized" : undefined;
+  return <>
+    <img {...props} src={url} alt={alt} title={props.title ?? attribution} />
+    {showCredit && credit && catalog && <a className="product-photo-attribution" title={attribution}
+      href={catalog.site + "/product/" + credit.barcode} target="_blank" rel="noreferrer">Photo credit</a>}
+  </>;
 }
 export default ProductPhoto;

@@ -146,7 +146,8 @@ test('offline uploaded product photos survive reload and appear on another devic
     const one = await f.device(), observer = await f.device();
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZQmcAAAAASUVORK5CYII=', 'base64');
     const bytes = Buffer.concat([png, Buffer.alloc(400000 - png.length)]);
-    const payload = {id: `media-${id()}`, mime: 'image/png' as const, data: bytes.toString('base64'), byteLength: bytes.length, width: 1, height: 1};
+    const catalogCredit = {catalog: 'products' as const, barcode: '4791234567890'};
+    const payload = {id: `media-${id()}`, mime: 'image/png' as const, data: bytes.toString('base64'), byteLength: bytes.length, width: 1, height: 1, catalogCredit};
     assert.equal(assertMediaPayload(payload).byteLength, 400000);
     const uploaded = await one.api<MediaResponse>('/media', {...payload, commandId: id()}, 'POST', {offline: true});
     const product = await one.api<{item: MenuItem}>('/menu', {commandId: id(), name: 'Photo Product', categoryId: 'rice', price: 15000, cost: 7000, image: uploaded.reference, available: true, stockMode: 'untracked', preparationMinutes: 0}, 'POST', {offline: true});
@@ -157,6 +158,7 @@ test('offline uploaded product photos survive reload and appear on another devic
     const remote = await observer.api<Snapshot>('/bootstrap');
     assert.equal(remote.menu.find(value => value.id === product.item.id)!.image, uploaded.reference);
     const fetched = await f.call<{media: MediaRecord}>(`media&sourceId=${f.sourceId}&id=${payload.id}`);
+    assert.deepEqual(fetched.media.catalogCredit, catalogCredit);
     await observer.cacheMedia(fetched.media);
     assert.equal((await observer.api<{media: MediaRecord}>(`/media/${payload.id}`)).media.data, payload.data);
     assert.equal((await observer.db.records.get(['media', payload.id]))!.kind, 'media');

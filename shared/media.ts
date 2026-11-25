@@ -1,3 +1,5 @@
+import {photoCatalogs, photoBarcode, type CatalogPhotoCredit} from './product-photo-catalog.js';
+
 /** Product photos are immutable, small raster records, shared by both databases. */
 export const MAX_MEDIA_BYTES = 700_000;
 export const MAX_MEDIA_DIMENSION = 4096;
@@ -9,6 +11,7 @@ export interface MediaInput {
   byteLength: number;
   width: number;
   height: number;
+  catalogCredit?: CatalogPhotoCredit;
 }
 export interface MediaRecord extends MediaInput {branchId: null; createdAt: string}
 export interface MediaResponse {ok: true; reference: string; media: Omit<MediaRecord, 'data'>}
@@ -67,9 +70,17 @@ export function assertMediaPayload(value: unknown): MediaInput {
   if (bytes.length !== input.byteLength) throw new Error('The photo size does not match its contents.');
   const dimensions = imageDimensions(bytes, input.mime as ProductImageMime);
   if (dimensions.width !== input.width || dimensions.height !== input.height) throw new Error('The photo dimensions do not match its contents.');
-  return {id: input.id, mime: input.mime as ProductImageMime, data: input.data, byteLength: input.byteLength as number, width: input.width as number, height: input.height as number};
+  let catalogCredit: CatalogPhotoCredit | undefined;
+  if (input.catalogCredit !== undefined) {
+    const value = input.catalogCredit as Partial<CatalogPhotoCredit> | null;
+    if (!value || typeof value.catalog !== "string" || !Object.hasOwn(photoCatalogs, value.catalog) ||
+        typeof value.barcode !== "string" || !photoBarcode(value.barcode)) throw new Error("The photo attribution is invalid.");
+    catalogCredit = {catalog: value.catalog, barcode: photoBarcode(value.barcode)};
+  }
+  return {id: input.id, mime: input.mime as ProductImageMime, data: input.data, byteLength: input.byteLength as number, width: input.width as number, height: input.height as number, ...(catalogCredit ? {catalogCredit} : {})};
 }
 export function sameMedia(a: MediaInput, b: MediaInput): boolean {
-  return a.id === b.id && a.mime === b.mime && a.data === b.data && a.width === b.width && a.height === b.height && a.byteLength === b.byteLength;
+  return a.id === b.id && a.mime === b.mime && a.data === b.data && a.width === b.width && a.height === b.height && a.byteLength === b.byteLength &&
+    a.catalogCredit?.catalog === b.catalogCredit?.catalog && a.catalogCredit?.barcode === b.catalogCredit?.barcode;
 }
 export function mediaMetadata(record: MediaRecord): Omit<MediaRecord, 'data'> {const {data: _data, ...metadata} = record; return metadata;}
