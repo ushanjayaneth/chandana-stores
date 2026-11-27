@@ -1,3 +1,4 @@
+import {useLanguage, useTranslation} from "../lib/language";
 import { useEffect, useRef, type ReactNode, type RefObject } from "react";
 import { X, LoaderCircle, Inbox } from "lucide-react";
 import {createPortal} from 'react-dom';
@@ -65,6 +66,7 @@ export function Modal({
   onClose: () => void;
   wide?: boolean;
 }) {
+  const tr = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -107,19 +109,19 @@ export function Modal({
         className={`modal ${wide ? "modal-wide" : ""}`}
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-label={tr(title)}
         tabIndex={-1}
         ref={ref}
       >
         <div className="modal-header">
           <div>
-            <h2>{title}</h2>
-            {subtitle && <p>{subtitle}</p>}
+            <h2>{tr(title)}</h2>
+            {subtitle && <p>{tr(subtitle)}</p>}
           </div>
           <button
             className="icon-button"
             onClick={onClose}
-            aria-label="Close dialog"
+            aria-label={tr("Close dialog")}
           >
             <X size={20} />
           </button>
@@ -130,10 +132,11 @@ export function Modal({
   );
 }
 export function Spinner({ label = "Loading workspace" }: { label?: string }) {
+  const tr = useTranslation();
   return (
     <div className="loading-state">
       <LoaderCircle className="spin" size={26} />
-      <span>{label}</span>
+      <span>{tr(label)}</span>
     </div>
   );
 }
@@ -158,6 +161,9 @@ export function EmptyState({
   );
 }
 export function StatusBadge({ status }: { status: string }) {
+  const tr = useTranslation();
+  const {locale} = useLanguage();
   const label = status.replaceAll("-", " ");
-  return <span className={`badge status-${status}`}>{label}</span>;
+  const translation = label.charAt(0).toUpperCase() + label.slice(1);
+  return <span className={`badge status-${status}`}>{locale === "si" ? tr(translation) : label}</span>;
 }

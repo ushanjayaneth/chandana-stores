@@ -1,3 +1,4 @@
+import {LanguageToggle, useLanguage, useTranslation} from "./lib/language";
 import {startPeripheralConnections} from './lib/peripherals';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
@@ -119,18 +120,20 @@ const allowedPages: Record<string, string[]> = {
   storekeeper: ["products", "inventory", "purchases", "settings"],
 };
 function Brand({onAdmin,unlocked=false}:{onAdmin?:()=>void;unlocked?:boolean}={}) {
+  const tr = useTranslation();
   return (
     <div className="brand">
-      {onAdmin?<button type="button" className="brand-mark admin-logo-button" aria-label={unlocked?'Lock admin access':'Unlock admin access'} title={unlocked?'Lock admin access':'Unlock admin access'} aria-pressed={unlocked} onClick={onAdmin}><Store size={29} strokeWidth={1.6}/><span className={`admin-logo-status ${unlocked?'unlocked':''}`}><LockKeyhole size={10}/></span></button>:<div className="brand-mark"><Store size={29} strokeWidth={1.6}/></div>}
+      {onAdmin?<button type="button" className="brand-mark admin-logo-button" aria-label={unlocked?tr("Lock admin access"):tr("Unlock admin access")} title={unlocked?tr("Lock admin access"):tr("Unlock admin access")} aria-pressed={unlocked} onClick={onAdmin}><Store size={29} strokeWidth={1.6}/><span className={`admin-logo-status ${unlocked?'unlocked':''}`}><LockKeyhole size={10}/></span></button>:<div className="brand-mark"><Store size={29} strokeWidth={1.6}/></div>}
       <div className="brand-wordmark">
         <div className="brand-name">Chandana Stores</div>
-        <span className="brand-caption">RETAIL WORKSPACE</span>
+        <span className="brand-caption">{tr("RETAIL WORKSPACE")}</span>
       </div>
     </div>
   );
 }
 
 function Login({ onLogin,onSetup,onRestore,deviceInfo=null,cloudLogin }: { onLogin?: (user: User) => void;onSetup?:()=>void;onRestore?:()=>void;deviceInfo?:LocalWorkspaceInfo|null;cloudLogin?:(pin:string)=>Promise<void> }) {
+  const tr = useTranslation();
   const mode=useWorkspaceMode();
   const [pin, setPin] = useState("");
   const [busy, setBusy] = useState(false);
@@ -154,31 +157,21 @@ function Login({ onLogin,onSetup,onRestore,deviceInfo=null,cloudLogin }: { onLog
         <Brand />
         <div className="login-copy">
           <div className="eyebrow">
-            <span className="status-dot" /> A LITTLE MORE ORDER. A LOT LESS
-            FRICTION.
-          </div>
-          <h1>
-            Every product.
-            <br />
-            Every sale.
-            <br />
-            <em>Under control.</em>
+            <span className="status-dot" /> {tr("A LITTLE MORE ORDER. A LOT LESS FRICTION.")}</div>
+          <h1>{tr("Every product.")}<br />{tr("Every sale.")}<br />
+            <em>{tr("Under control.")}</em>
           </h1>
-          <p>
-            A clear view of your counter, your shelves, and the numbers that keep
-            your store moving.
-          </p>
+          <p>{tr("A clear view of your counter, your shelves, and the numbers that keep your store moving.")}</p>
           <div className="login-badges">
             <span>
-              {cloudLogin?<><Wifi size={14} /> Your shop, connected</>:<><WifiOff size={14} /> Works without internet</>}
+              {cloudLogin?<><Wifi size={14} /> {tr("Your shop, connected")}</>:<><WifiOff size={14} /> {tr("Works without internet")}</>}
             </span>
             <span>
-              <MonitorSmartphone size={14} /> Made for every screen
-            </span>
+              <MonitorSmartphone size={14} /> {tr("Made for every screen")}</span>
           </div>
         </div>
         <div className="login-footer">
-          <ShieldCheck size={14} /> {cloudLogin?'One shop. The same data on every device.':'Stored at your branch. Synced on your terms.'}
+          <ShieldCheck size={14} /> {cloudLogin?tr("One shop. The same data on every device."):tr("Stored at your branch. Synced on your terms.")}
         </div>
         <div className="login-orb" />
       </section>
@@ -190,12 +183,13 @@ function Login({ onLogin,onSetup,onRestore,deviceInfo=null,cloudLogin }: { onLog
             void login(pin);
           }}
         >
-          <div className="login-lock">
-            <LockKeyhole size={23} />
+          <div className="login-controls">
+            <div className="login-lock"><LockKeyhole size={23} /></div>
+            <LanguageToggle />
           </div>
-          <div className="eyebrow">YOUR STORE, IN ORDER</div>
-          <h2>{!cloudLogin&&mode==='device'&&!deviceInfo?'Make it your store.':'Welcome back.'}</h2>
-          <p>{cloudLogin?'Sign in online once on a new device. Wait for Offline ready before disconnecting.':mode==='device'?'Enter your private staff PIN to open this device’s saved workspace.':'Enter your staff PIN to open your workspace.'}</p>
+          <div className="eyebrow">{tr("YOUR STORE, IN ORDER")}</div>
+          <h2>{!cloudLogin&&mode==='device'&&!deviceInfo?tr("Make it your store."):tr("Welcome back.")}</h2>
+          <p>{cloudLogin?tr("Sign in online once on a new device. Wait for Offline ready before disconnecting."):mode==='device'?tr("Enter your private staff PIN to open this device’s saved workspace."):tr("Enter your staff PIN to open your workspace.")}</p>
           {error && (
             <div className="error-message" role="alert">
               {error}
@@ -203,7 +197,7 @@ function Login({ onLogin,onSetup,onRestore,deviceInfo=null,cloudLogin }: { onLog
           )}
           {(cloudLogin||mode==='hub'||deviceInfo)&&<>
           <label className="field">
-            <span>Staff PIN</span>
+            <span>{tr("Staff PIN")}</span>
             <input
               className="input pin-input"
               type="password"
@@ -216,7 +210,7 @@ function Login({ onLogin,onSetup,onRestore,deviceInfo=null,cloudLogin }: { onLog
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
               placeholder="••••"
-              aria-label="Staff PIN"
+              aria-label={tr("Staff PIN")}
             />
           </label>
           <button
@@ -226,31 +220,26 @@ function Login({ onLogin,onSetup,onRestore,deviceInfo=null,cloudLogin }: { onLog
             {busy ? (
               <RefreshCw size={15} className="spin" />
             ) : (
-              <>
-                Open workspace <ArrowRight size={15} />
+              <>{tr("Open workspace")} <ArrowRight size={15} />
               </>
             )}
           </button>
           </>}
-          {!cloudLogin&&mode==='hub' && <><div className="login-divider">just looking around?</div>
+          {!cloudLogin&&mode==='hub' && <><div className="login-divider">{tr("just looking around?")}</div>
           <button
             className="button demo-login"
             type="button"
             onClick={() => void login("1234")}
             disabled={busy}
           >
-            <Leaf size={15} /> Explore demo workspace <ArrowUpRight size={14} />
+            <Leaf size={15} /> {tr("Explore demo workspace")} <ArrowUpRight size={14} />
           </button>
-          <p className="demo-caption">
-            Sample grocery products · no real payments
-            <br />
-            Demo owner PIN: 1234
-          </p></>}
-          {!cloudLogin&&mode==='hub'&&<div className="device-login-option"><div className="login-divider">work on this device</div>{deviceInfo?<button type="button" className="button full-width" onClick={()=>setWorkspaceMode('device')}><Database size={15}/> Open saved device workspace</button>:<><button type="button" className="button full-width" onClick={onSetup}><Database size={15}/> Set up this device</button><button type="button" className="button button-ghost full-width" onClick={onRestore}>Restore device backup</button><p className="demo-caption">Keep your workspace on this device. No hosted backend required.</p></>}</div>}
-          {!cloudLogin&&mode==='device'&&<><p className="demo-caption">{deviceInfo?'Saved on this device · Setup complete':'Device data is unavailable. Restore your backup or create a new workspace.'}<br/><button type="button" className="button button-ghost button-small" onClick={()=>setWorkspaceMode('hub')}>Use branch hub instead</button></p>{!deviceInfo&&<div className="device-login-option"><button type="button" className="button full-width" onClick={onRestore}>Restore device backup</button><button type="button" className="button button-primary full-width" onClick={onSetup}><Store size={16}/> Create your store</button></div>}</>}
+          <p className="demo-caption">{tr("Sample grocery products · no real payments")}<br />{tr("Demo owner PIN: 1234")}</p></>}
+          {!cloudLogin&&mode==='hub'&&<div className="device-login-option"><div className="login-divider">{tr("work on this device")}</div>{deviceInfo?<button type="button" className="button full-width" onClick={()=>setWorkspaceMode('device')}><Database size={15}/> {tr("Open saved device workspace")}</button>:<><button type="button" className="button full-width" onClick={onSetup}><Database size={15}/> {tr("Set up this device")}</button><button type="button" className="button button-ghost full-width" onClick={onRestore}>{tr("Restore device backup")}</button><p className="demo-caption">{tr("Keep your workspace on this device. No hosted backend required.")}</p></>}</div>}
+          {!cloudLogin&&mode==='device'&&<><p className="demo-caption">{deviceInfo?tr("Saved on this device · Setup complete"):tr("Device data is unavailable. Restore your backup or create a new workspace.")}<br/><button type="button" className="button button-ghost button-small" onClick={()=>setWorkspaceMode('hub')}>{tr("Use branch hub instead")}</button></p>{!deviceInfo&&<div className="device-login-option"><button type="button" className="button full-width" onClick={onRestore}>{tr("Restore device backup")}</button><button type="button" className="button button-primary full-width" onClick={onSetup}><Store size={16}/> {tr("Create your store")}</button></div>}</>}
         </form>
         <div className="login-bottom">
-          <ShieldCheck size={12} /> Your session stays on this device. <InstallAppButton className="button button-ghost button-small" />
+          <ShieldCheck size={12} /> {tr("Your session stays on this device.")} <InstallAppButton className="button button-ghost button-small" />
         </div>
       </section>
     </div>
@@ -258,6 +247,8 @@ function Login({ onLogin,onSetup,onRestore,deviceInfo=null,cloudLogin }: { onLog
 }
 
 function WorkspaceApp() {
+  const tr = useTranslation();
+  const {locale} = useLanguage();
   const mode=useWorkspaceMode();
   const admin=useAdminAccess(sharedCloudSource());
   const adminLocked=admin.enabled&&!admin.unlocked;
@@ -368,7 +359,7 @@ function WorkspaceApp() {
     const key = 'retail-offline-ready:' + shopSource;
     if (uiStorage.getItem(key)) return;
     uiStorage.setItem(key, '1');
-    notify('Offline ready. This device can reopen and bill without internet.');
+    notify(tr("Offline ready. This device can reopen and bill without internet."));
   }, [readyForOffline, shopSource, notify]);
 
   const announceUpdate = useCallback((worker?: ServiceWorker | null) => {
@@ -645,8 +636,8 @@ function WorkspaceApp() {
       if(document.querySelector('[role="dialog"]'))return;
       const shortcuts:Partial<Record<ShortcutAction,Page>>={'go-pos':'pos','go-held':'held-bills','go-sales':'sales-history','go-products':'products','go-customers':'customers','go-reports':'reports','go-finance':'finance','go-settings':'settings'};
       const destination=shortcuts[action];
-      if(destination){if((allowedPages[user.role]||[]).includes(destination))navigate(destination);else notify('Your role does not have access to this page.','error');return;}
-      if(page==='pos')dispatchShortcut(action);else notify('Open Point of sale to use this shortcut.');
+      if(destination){if((allowedPages[user.role]||[]).includes(destination))navigate(destination);else notify(tr("Your role does not have access to this page."),'error');return;}
+      if(page==='pos')dispatchShortcut(action);else notify(tr("Open Point of sale to use this shortcut."));
     };
     window.addEventListener('keydown',handler);
     return()=>window.removeEventListener('keydown',handler);
@@ -671,25 +662,22 @@ function WorkspaceApp() {
   }
   if (starting) return <Spinner />;
   if (!user&&sharedCloudSource())return <CloudPOSEntry source={sharedCloudSource()!}/>;
-  if (!user) return <><Login onLogin={onLogin} onSetup={()=>setDeviceSetup(true)} onRestore={()=>setDeviceRestore(true)} deviceInfo={deviceInfo}/><Suspense fallback={<Spinner label="Opening device setup"/>}>{deviceSetup&&<DeviceSetup onClose={()=>setDeviceSetup(false)} onComplete={(next)=>{setDeviceSetup(false);setBranchId('b1');setUser(next);uiStorage.setItem('retail-device-last-user',JSON.stringify(next));void getLocalWorkspaceInfo().then(setDeviceInfo);}}/>}{deviceRestore&&<InitialDeviceRestore onClose={()=>setDeviceRestore(false)}/>}</Suspense></>;
+  if (!user) return <><Login onLogin={onLogin} onSetup={()=>setDeviceSetup(true)} onRestore={()=>setDeviceRestore(true)} deviceInfo={deviceInfo}/><Suspense fallback={<Spinner label={tr("Opening device setup")}/>}>{deviceSetup&&<DeviceSetup onClose={()=>setDeviceSetup(false)} onComplete={(next)=>{setDeviceSetup(false);setBranchId('b1');setUser(next);uiStorage.setItem('retail-device-last-user',JSON.stringify(next));void getLocalWorkspaceInfo().then(setDeviceInfo);}}/>}{deviceRestore&&<InitialDeviceRestore onClose={()=>setDeviceRestore(false)}/>}</Suspense></>;
   if (!data || data.branch.id !== branchId) {
     if (loadError)
       return (
         <div className="boot-error panel">
-          <h2>Let’s reconnect your workspace.</h2>
-          <p>{loadError}</p>
+          <h2>{tr("Let’s reconnect your workspace.")}</h2>
+          <p>{tr(loadError)}</p>
           <button
             className="button button-primary"
             onClick={() => void refresh()}
           >
-            <RefreshCw size={14} /> Try again
-          </button>
-          <button className="button button-ghost" onClick={() => void logout()}>
-            Sign out
-          </button>
+            <RefreshCw size={14} /> {tr("Try again")}</button>
+          <button className="button button-ghost" onClick={() => void logout()}>{tr("Sign out")}</button>
         </div>
       );
-    return <Spinner label="Opening your branch workspace" />;
+    return <Spinner label={tr("Opening your branch workspace")} />;
   }
   const title =
     navigation.flatMap((n) => n.items).find((n) => n.id === page)?.label ||
@@ -703,8 +691,8 @@ function WorkspaceApp() {
   const context = {
     data: { ...(adminLocked?cashierSnapshot(data):data), sync: { ...data.sync, hubOnline } },
     branchId,
-    locale: "en" as const,
-    t: (en: string, _si: string) => en,
+    locale,
+    t: (en: string, si: string) => locale === "si" ? si : en,
     refresh,
     mutate,
     notify,
@@ -719,25 +707,25 @@ function WorkspaceApp() {
         )}
         <aside className={`sidebar ${mobileNav ? "mobile-open" : ""}`}>
           <Brand onAdmin={admin.enabled?()=>{
-            if(admin.unlocked){lockAdmin(sharedCloudSource());if(adminPages.has(page))routeTo('pos',null,true);notify('Admin access locked.');}
+            if(admin.unlocked){lockAdmin(sharedCloudSource());if(adminPages.has(page))routeTo('pos',null,true);notify(tr("Admin access locked."));}
             else{setAdminError('');setAdminPin('');setAdminDialog(true);}
           }:undefined} unlocked={admin.unlocked}/>
-          <nav className="sidebar-scroll" aria-label="Main navigation">
+          <nav className="sidebar-scroll" aria-label={tr("Main navigation")}>
             {navigation.map((group) => (
               <div key={group.label}>
-                <div className="nav-label">{group.label}</div>
+                <div className="nav-label">{tr(group.label)}</div>
                 {group.items
                   .filter((item) => visiblePages.includes(item.id))
                   .map((item) => (
                     <button
                       key={item.id}
-                      title={item.label}
+                      title={tr(item.label)}
                       className={`nav-item ${page === item.id ? "active" : ""}`}
                       onClick={() => navigate(item.id as Page)}
                       aria-current={page === item.id ? "page" : undefined}
                     >
                       <item.icon size={17} strokeWidth={1.6} />
-                      <span>{item.label}</span>
+                      <span>{tr(item.label)}</span>
                       {item.id === "orders" && activeOrders.length > 0 && (
                         <small className="nav-count">
                           {activeOrders.length}
@@ -752,20 +740,20 @@ function WorkspaceApp() {
             <div className="hub-status">
               <i className={`status-dot ${!hubOnline ? "offline" : ""}`} />
               <span>
-                {sharedCloudSource()?(data.sync.pending?'Cloud sync pending':readyForOffline?'Offline ready':navigator.serviceWorker?'Preparing offline access':'Shared cloud connected'):deviceMode?'Device database ready':hubOnline ? "Branch hub connected" : "Hub unavailable"}
+                {sharedCloudSource()?(data.sync.pending?tr("Cloud sync pending"):readyForOffline?tr("Offline ready"):navigator.serviceWorker?tr("Preparing offline access"):tr("Shared cloud connected")):deviceMode?tr("Device database ready"):hubOnline ? tr("Branch hub connected") : tr("Hub unavailable")}
               </span>
             </div>
             <div className="user-card">
               <div className="avatar">{user.initials}</div>
               <div className="user-details">
                 <strong>{user.name}</strong>
-                <small>{admin.enabled?(adminLocked?'Cashier mode':'Admin unlocked'):user.role}</small>
+                <small>{admin.enabled?(adminLocked?tr("Cashier mode"):tr("Admin unlocked")):locale==="si"?tr(user.role.charAt(0).toUpperCase()+user.role.slice(1)):user.role}</small>
               </div>
               <button
                 className="logout-button"
                 onClick={() => void logout()}
-                title="Sign out"
-                aria-label="Sign out"
+                title={tr("Sign out")}
+                aria-label={tr("Sign out")}
               >
                 <LogOut size={15} />
               </button>
@@ -774,23 +762,24 @@ function WorkspaceApp() {
         </aside>
         <main className="main">
           <header className="topbar">
-            <button className="icon-button app-back-button" onClick={back} aria-label="Go back one step" title="Go back"><ArrowLeft size={17}/></button>
+            <button className="icon-button app-back-button" onClick={back} aria-label={tr("Go back one step")} title={tr("Go back")}><ArrowLeft size={17}/></button>
             <button
               className="icon-button mobile-menu-button"
               onClick={() => setMobileNav(true)}
-              aria-label="Open navigation"
+              aria-label={tr("Open navigation")}
             >
               <Menu size={19} />
             </button>
             <div className="breadcrumb">
-              <span>Workspace</span>
+              <span>{tr("Workspace")}</span>
               <ChevronRight size={12} />
-              <strong>{title}</strong>
+              <strong>{tr(title)}</strong>
             </div>
             <div className="topbar-actions">
               <ConnectivityStatus/>
+              <LanguageToggle />
               <span className="topbar-date">
-                {new Intl.DateTimeFormat("en-GB", {
+                {new Intl.DateTimeFormat(locale === "si" ? "si-LK" : "en-GB", {
                   weekday: "short",
                   day: "numeric",
                   month: "short",
@@ -801,7 +790,7 @@ function WorkspaceApp() {
                 <Store size={14} />
                 <select
                   value={branchId}
-                  aria-label="Choose branch"
+                  aria-label={tr("Choose branch")}
                   disabled={!!user.branchId}
                   onChange={(e) => {
                     setBranchId(e.target.value);
@@ -819,30 +808,30 @@ function WorkspaceApp() {
               <button
                 className="icon-button refresh-button"
                 onClick={() => {const source=sharedCloudSource();if(source)retryCloudConnection(source);void refresh();void checkAppUpdate();}}
-                title="Refresh workspace"
-                aria-label="Refresh workspace"
+                title={tr("Refresh workspace")}
+                aria-label={tr("Refresh workspace")}
               >
                 <RefreshCw size={15} />
               </button>
-              <button className="icon-button shortcut-help-button" aria-label="Keyboard shortcuts" title="Keyboard shortcuts" onClick={()=>setShortcutHelp(true)}><Keyboard size={16}/></button>
+              <button className="icon-button shortcut-help-button" aria-label={tr("Keyboard shortcuts")} title={tr("Keyboard shortcuts")} onClick={()=>setShortcutHelp(true)}><Keyboard size={16}/></button>
               <button
                 className="icon-button notification-button"
                 onClick={() => setNotifications(!notifications)}
-                aria-label="Notifications"
+                aria-label={tr("Notifications")}
               >
                 <Bell size={16} />
               </button>
             </div>
             {notifications && (
               <div className="notification-popover">
-                <h3>Workspace updates</h3>
+                <h3>{tr("Workspace updates")}</h3>
                 <div className="notification-row">
                   <Package size={17} />
                   <div>
                     {lowStock.length
-                      ? `${lowStock.length} items need a stock check.`
-                      : "Stock levels are looking good."}
-                    <small>Current branch inventory</small>
+                      ? tr("{0} items need a stock check.", lowStock.length)
+                      : tr("Stock levels are looking good.")}
+                    <small>{tr("Current branch inventory")}</small>
                   </div>
                 </div>
                 <div className="notification-row">
@@ -853,33 +842,30 @@ function WorkspaceApp() {
                   )}
                   <div>
                     {data.sync.configured
-                      ? `${data.sync.pending} changes waiting to sync.`
-                      : deviceMode?'Your data is stored on this device.':"Your data is stored at this branch."}
+                      ? tr("{0} changes waiting to sync.", data.sync.pending)
+                      : deviceMode?tr("Your data is stored on this device."):tr("Your data is stored at this branch.")}
                     <small>
                       {data.sync.configured
-                        ? "Cloud sync configured"
-                        : deviceMode?'Export encrypted backups in Settings':"Connect cloud sync in Settings"}
+                        ? tr("Cloud sync configured")
+                        : deviceMode?tr("Export encrypted backups in Settings"):tr("Connect cloud sync in Settings")}
                     </small>
                   </div>
                 </div>
                 <button
                   className="button button-ghost"
                   onClick={() => navigate("settings")}
-                >
-                  View workspace settings <ArrowRight size={13} />
+                >{tr("View workspace settings")} <ArrowRight size={13} />
                 </button>
               </div>
             )}
           </header>
           <div className="workspace">
-            {sharedCloudSource()&&(data.sync.cloudOnline===false||data.sync.pending>0)&&<div className="notice-banner" role="status"><WifiOff size={16}/><span>{data.sync.cloudOnline===false?'Working offline. Bills, payments and receipts are saved on this device.':'Your saved bills are uploading.'} {data.sync.pending>0?`${data.sync.pending} saved updates waiting to sync. `:''}They upload automatically when this app can reach the cloud.{data.sync.lastError?` ${data.sync.lastError}`:''}</span></div>}
+            {sharedCloudSource()&&(data.sync.cloudOnline===false||data.sync.pending>0)&&<div className="notice-banner" role="status"><WifiOff size={16}/><span>{data.sync.cloudOnline===false?tr("Working offline. Bills, payments and receipts are saved on this device."):tr("Your saved bills are uploading.")} {data.sync.pending>0?tr("{0} saved updates waiting to sync.", data.sync.pending):''}{tr("They upload automatically when this app can reach the cloud.")}{data.sync.lastError?` ${data.sync.lastError}`:''}</span></div>}
             {!hubOnline && (
               <div className="notice-banner">
-                <WifiOff size={16} /> The branch hub is unavailable. Viewing
-                saved data; new orders stay as drafts until you reconnect.
-              </div>
+                <WifiOff size={16} /> {tr("The branch hub is unavailable. Viewing saved data; new orders stay as drafts until you reconnect.")}</div>
             )}
-            <Suspense fallback={<Spinner label="Opening page"/>}>{adminLocked&&adminPages.has(page)?<Spinner label="Opening the register"/>:page === "pos" ? (
+            <Suspense fallback={<Spinner label={tr("Opening page")}/>}>{adminLocked&&adminPages.has(page)?<Spinner label={tr("Opening the register")}/>:page === "pos" ? (
               <POS
                 selectedOrderId={selectedOrder}
                 onSelectOrder={setSelectedOrder}
@@ -893,16 +879,15 @@ function WorkspaceApp() {
               <Products/>
             ) : page === 'team' ? (
               <StaffWorkspace/>
-            ) : page==='settings'&&!['owner','manager'].includes(user.role) ? <><div className="page-heading"><div><div className="eyebrow">MAKE IT YOURS</div><h1>Settings<span className="heading-period">.</span></h1><p className="page-subtitle">Display, shortcuts, receipts and devices.</p></div></div><WorkspacePreferences/></> : (
-              adminLocked&&page==='finance'?<CashierShift/>:adminLocked&&page==='settings'?<WorkspacePreferences/>:<Suspense fallback={<Spinner label="Opening page"/>}><Management page={page} /></Suspense>
+            ) : page==='settings'&&!['owner','manager'].includes(user.role) ? <><div className="page-heading"><div><div className="eyebrow">{tr("MAKE IT YOURS")}</div><h1>{tr("Settings")}<span className="heading-period">.</span></h1><p className="page-subtitle">{tr("Display, shortcuts, receipts and devices.")}</p></div></div><WorkspacePreferences/></> : (
+              adminLocked&&page==='finance'?<CashierShift/>:adminLocked&&page==='settings'?<WorkspacePreferences/>:<Suspense fallback={<Spinner label={tr("Opening page")}/>}><Management page={page} /></Suspense>
             )}</Suspense>
             <div className="footer-line">
               <span>
-                <ShieldCheck size={10} /> {deviceMode?'Device workspace · Saved locally':'Local-first retail workspace'}
+                <ShieldCheck size={10} /> {deviceMode?tr("Device workspace · Saved locally"):tr("Local-first retail workspace")}
               </span>
               <span>
-                Chandana Stores <i style={{ opacity: 0.4 }}>·</i> v0.1.0
-              </span>
+                Chandana Stores <i style={{ opacity: 0.4 }}>·</i> {tr("v0.1.0")}</span>
             </div>
           </div>
         </main>
@@ -917,19 +902,19 @@ function WorkspaceApp() {
               ) : (
                 <CheckCheck size={17} />
               )}
-              <span>{toast.message}</span>
+              <span>{tr(toast.message)}</span>
               <button
                 onClick={() =>
                   setToasts((v) => v.filter((t) => t.id !== toast.id))
                 }
-                aria-label="Dismiss notification"
+                aria-label={tr("Dismiss notification")}
               >
                 <X size={13} />
               </button>
             </div>
           ))}
         </div>
-        {updateReady && !updateOpen && <button className="update-reminder button" aria-label="Update available" onClick={() => {setUpdateError('');setUpdateOpen(true);}}><RefreshCw size={16}/><span>Update available</span></button>}
+        {updateReady && !updateOpen && <button className="update-reminder button" aria-label={tr("Update available")} onClick={() => {setUpdateError('');setUpdateOpen(true);}}><RefreshCw size={16}/><span>{tr("Update available")}</span></button>}
       </div>
       {receipt && (
         <Receipt
@@ -941,23 +926,23 @@ function WorkspaceApp() {
           onClose={() => setReceiptId(null)}
         />
       )}
-      {shortcutHelp&&<Modal title="Keyboard shortcuts" subtitle="Your current shortcuts for this device." onClose={()=>setShortcutHelp(false)} wide><div className="shortcut-help">{shortcutActions.map(action=><div key={action.id}><span>{action.label}</span><kbd>{preferences.shortcuts[action.id]}</kbd></div>)}</div><div className="form-actions"><button className="button button-ghost" onClick={()=>{setShortcutHelp(false);navigate('settings');}}>Customize in Settings</button><button className="button button-primary" onClick={()=>setShortcutHelp(false)}>Done</button></div></Modal>}
-      {adminDialog&&<Modal title="Unlock admin access" subtitle="Enter the admin PIN to view private reports and manage products and stock." onClose={()=>{if(adminBusy)return false;setAdminDialog(false);setAdminPin('');}}>
-        <form onSubmit={event=>{event.preventDefault();if(adminBusy)return;const source=sharedCloudSource();if(!source)return;setAdminBusy(true);setAdminError('');void unlockAdmin(source,adminPin).then(async()=>{await refresh(true);setAdminDialog(false);setAdminPin('');notify('Admin access unlocked.');}).catch(error=>setAdminError((error as Error).message)).finally(()=>setAdminBusy(false));}}>
+      {shortcutHelp&&<Modal title={tr("Keyboard shortcuts")} subtitle={tr("Your current shortcuts for this device.")} onClose={()=>setShortcutHelp(false)} wide><div className="shortcut-help">{shortcutActions.map(action=><div key={action.id}><span>{tr(action.label)}</span><kbd>{preferences.shortcuts[action.id]}</kbd></div>)}</div><div className="form-actions"><button className="button button-ghost" onClick={()=>{setShortcutHelp(false);navigate('settings');}}>{tr("Customize in Settings")}</button><button className="button button-primary" onClick={()=>setShortcutHelp(false)}>{tr("Done")}</button></div></Modal>}
+      {adminDialog&&<Modal title={tr("Unlock admin access")} subtitle={tr("Enter the admin PIN to view private reports and manage products and stock.")} onClose={()=>{if(adminBusy)return false;setAdminDialog(false);setAdminPin('');}}>
+        <form onSubmit={event=>{event.preventDefault();if(adminBusy)return;const source=sharedCloudSource();if(!source)return;setAdminBusy(true);setAdminError('');void unlockAdmin(source,adminPin).then(async()=>{await refresh(true);setAdminDialog(false);setAdminPin('');notify(tr("Admin access unlocked."));}).catch(error=>setAdminError((error as Error).message)).finally(()=>setAdminBusy(false));}}>
           <div className="admin-unlock-symbol"><ShieldCheck size={28}/></div>
-          <label className="field"><span>Admin PIN</span><input className="input pin-input" type="password" inputMode="numeric" pattern="[0-9]{4,16}" minLength={4} maxLength={16} required autoComplete="off" value={adminPin} disabled={adminBusy} onChange={event=>{setAdminPin(event.target.value.replace(/\D/g,''));setAdminError('');}} placeholder="••••"/></label>
+          <label className="field"><span>{tr("Admin PIN")}</span><input className="input pin-input" type="password" inputMode="numeric" pattern="[0-9]{4,16}" minLength={4} maxLength={16} required autoComplete="off" value={adminPin} disabled={adminBusy} onChange={event=>{setAdminPin(event.target.value.replace(/\D/g,''));setAdminError('');}} placeholder="••••"/></label>
           {adminError&&<div className="error-message" role="alert">{adminError}</div>}
-          <p className="admin-unlock-note">Admin access applies to this window. Select the shop logo again to lock it.</p>
-          <div className="form-actions"><button type="button" className="button button-ghost" disabled={adminBusy} onClick={()=>{setAdminDialog(false);setAdminPin('');}}>Cancel</button><button className="button button-primary" disabled={adminBusy||adminPin.length<4}><LockKeyhole size={16}/>{adminBusy?'Unlocking…':'Unlock admin'}</button></div>
+          <p className="admin-unlock-note">{tr("Admin access applies to this window. Select the shop logo again to lock it.")}</p>
+          <div className="form-actions"><button type="button" className="button button-ghost" disabled={adminBusy} onClick={()=>{setAdminDialog(false);setAdminPin('');}}>{tr("Cancel")}</button><button className="button button-primary" disabled={adminBusy||adminPin.length<4}><LockKeyhole size={16}/>{adminBusy?tr("Unlocking…"):tr("Unlock admin")}</button></div>
         </form>
       </Modal>}
-      {updateReady && updateOpen && <Modal title="Update available" subtitle="A newer version of your workspace is ready." onClose={() => {if(updateBusy)return false;updateDismissed.current=true;setUpdateOpen(false);}}>
+      {updateReady && updateOpen && <Modal title={tr("Update available")} subtitle={tr("A newer version of your workspace is ready.")} onClose={() => {if(updateBusy)return false;updateDismissed.current=true;setUpdateOpen(false);}}>
         <div className="app-update-content" aria-busy={updateBusy}>
           <div className={`app-update-symbol ${updateBusy?'is-updating':''}`} aria-hidden="true"><RefreshCw size={30} className={updateBusy?'spin':''}/></div>
-          <p>{updateBusy?'Saving your cart and applying the update. The app will reopen automatically.':'Your current cart will be saved and the app will reopen in the same workspace. Finish any other open forms before updating, or choose Later.'}</p>
-          <div className="app-update-safety"><ShieldCheck size={17}/><span>Your saved bills, stock and offline transactions stay on this device.</span></div>
+          <p>{updateBusy?tr("Saving your cart and applying the update. The app will reopen automatically."):tr("Your current cart will be saved and the app will reopen in the same workspace. Finish any other open forms before updating, or choose Later.")}</p>
+          <div className="app-update-safety"><ShieldCheck size={17}/><span>{tr("Your saved bills, stock and offline transactions stay on this device.")}</span></div>
           {updateError && <div className="error-message" role="alert">{updateError}</div>}
-          <div className="form-actions"><button className="button button-ghost" disabled={updateBusy} onClick={() => {updateDismissed.current=true;setUpdateOpen(false);}}>Later</button><button className="button button-primary" disabled={updateBusy} onClick={() => void reloadAppUpdate()}><RefreshCw size={16} className={updateBusy?'spin':''}/>{updateBusy?'Updating…':'Update now'}</button></div>
+          <div className="form-actions"><button className="button button-ghost" disabled={updateBusy} onClick={() => {updateDismissed.current=true;setUpdateOpen(false);}}>{tr("Later")}</button><button className="button button-primary" disabled={updateBusy} onClick={() => void reloadAppUpdate()}><RefreshCw size={16} className={updateBusy?'spin':''}/>{updateBusy?tr("Updating…"):tr("Update now")}</button></div>
         </div>
       </Modal>}
     </AppContext.Provider>
@@ -965,6 +950,7 @@ function WorkspaceApp() {
 }
 
 function CloudPOSEntry({source}:{source?:string}){
+  const tr = useTranslation();
   const [authenticated,setAuthenticated]=useState<boolean|null>(null);
   useEffect(()=>{
     const changed=(event:Event)=>{
@@ -1048,11 +1034,12 @@ function CloudPOSEntry({source}:{source?:string}){
     if(source) setAuthenticated(true); else openSharedCloudWorkspace(workspace);
   };
   if(authenticated===false)return <Login cloudLogin={signIn}/>;
-  if(error)return <div className="boot-error panel"><h2>Let’s reconnect your workspace.</h2><p role="alert">{error}</p><button className="button button-primary" onClick={()=>setAttempt(value=>value+1)}><RefreshCw size={14}/> Try again</button></div>;
+  if(error)return <div className="boot-error panel"><h2>{tr("Let’s reconnect your workspace.")}</h2><p role="alert">{tr(error)}</p><button className="button button-primary" onClick={()=>setAttempt(value=>value+1)}><RefreshCw size={14}/> {tr("Try again")}</button></div>;
   if(authenticated&&source)return <NavigationProvider><WorkspaceApp/></NavigationProvider>;
-  return <Spinner label="Connecting your shop data"/>;
+  return <Spinner label={tr("Connecting your shop data")}/>;
 }
 function AutomaticCloudEntry(){
+  const tr = useTranslation();
   const [configured,setConfigured]=useState<boolean|null>(null);
   const [error,setError]=useState('');
   const [attempt,setAttempt]=useState(0);
@@ -1085,8 +1072,8 @@ function AutomaticCloudEntry(){
     });
     return()=>{active=false;};
   },[attempt]);
-  if(error)return <div className="boot-error panel"><h2>Let’s reconnect your workspace.</h2><p role="alert">{error}</p><button className="button button-primary" onClick={()=>setAttempt(value=>value+1)}><RefreshCw size={14}/> Try again</button></div>;
-  if(configured===null)return <Spinner label="Opening retail workspace"/>;
+  if(error)return <div className="boot-error panel"><h2>{tr("Let’s reconnect your workspace.")}</h2><p role="alert">{tr(error)}</p><button className="button button-primary" onClick={()=>setAttempt(value=>value+1)}><RefreshCw size={14}/> {tr("Try again")}</button></div>;
+  if(configured===null)return <Spinner label={tr("Opening retail workspace")}/>;
   return configured?<CloudPOSEntry/>:<NavigationProvider><WorkspaceApp/></NavigationProvider>;
 }
 export default function App(){

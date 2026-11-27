@@ -1,5 +1,5 @@
 import type {IncomingMessage, ServerResponse} from 'node:http';
-import {findProductPhotos} from '../server/product-photos.js';
+import {downloadRetailerPhoto, findProductPhotos} from '../server/product-photos.js';
 
 export default async function productPhotos(request: IncomingMessage, response: ServerResponse) {
   response.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -11,6 +11,15 @@ export default async function productPhotos(request: IncomingMessage, response: 
   }
   const params = new URL(request.url ?? '/', 'https://pos.local').searchParams;
   try {
+    const image = params.get('image');
+    if (image !== null) {
+      const photo = await downloadRetailerPhoto(image);
+      if (!photo) { response.writeHead(404); response.end(JSON.stringify({error: 'Photo unavailable'})); return; }
+      response.setHeader('Content-Type', photo.mime);
+      response.setHeader('X-Content-Type-Options', 'nosniff');
+      response.end(photo.bytes);
+      return;
+    }
     const photos = await findProductPhotos({query: params.get('q') ?? '', barcode: params.get('barcode') ?? ''});
     response.end(JSON.stringify({photos}));
   } catch {

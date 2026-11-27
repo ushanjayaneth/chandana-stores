@@ -1,3 +1,4 @@
+import {useTranslation} from "../lib/language";
 import {useEffect,useState} from 'react';
 import {getCloudSyncState,getLastCloudContact,type CloudSyncState} from '../lib/cloud-sync';
 import {sharedCloudSource} from '../lib/cloud-shared';
@@ -5,6 +6,7 @@ import {getOfflineStatus,type CloudOfflineStatus} from '../lib/cloud-offline';
 import '../styles/cloud-monitor.css';
 
 export default function ConnectivityStatus(){
+  const tr = useTranslation();
   const [online,setOnline]=useState(navigator.onLine),[state,setState]=useState<CloudSyncState|null>(null),[contact,setContact]=useState(getLastCloudContact),[clock,setClock]=useState(Date.now());
   const source=sharedCloudSource(),shared=Boolean(source);
   const [offlineState,setOfflineState]=useState<CloudOfflineStatus|null>(null);
@@ -19,8 +21,8 @@ export default function ConnectivityStatus(){
   },[]);
   const recent=online&&(shared?contact>0&&clock-contact<90000:Boolean(state?.lastSeenAt&&clock-new Date(state.lastSeenAt).getTime()<90000&&!state.lastError));
   const pending=shared?offlineState?.pending??0:state?.pending??0;
-  const label=shared?(pending?`${pending} pending`:!online&&offlineState?.ready?'Offline ready':recent?'Connected':'Reconnecting'):!state?'Not connected':state.needsReconnect?'Sign in again':state.shared?'Shared POS':pending?`${pending} pending`:recent?'Synced':'Offline';
+  const label=shared?(pending?tr('{0} pending', pending):!online&&offlineState?.ready?tr('Offline ready'):recent?tr('Connected'):tr('Reconnecting')):!state?tr('Not connected'):state.needsReconnect?tr('Sign in again'):state.shared?tr('Shared POS'):pending?tr('{0} pending', pending):recent?tr('Synced'):tr('Offline');
   const templateLocal=!shared&&import.meta.env.VITE_ENABLE_CLOUD!=='true';
   const dotColor=pending||shared&&!online&&offlineState?.ready?'amber':!online?'red':recent?'green':'red';
-  return <div className="cloud-dots" aria-label="Connection status"><span title="This device’s network connection"><i className={`cloud-dot ${online?'green':'red'}`}/><span>{online?'Online':'Offline'}</span></span><span title={(!shared&&state?.lastError)||'Cloud status reflects the last successful server response. Sign in to the shop workspace to connect.'}><i className={`cloud-dot ${templateLocal?"green":dotColor}`}/><span>{templateLocal?"Device storage ready":`Cloud ${label}`}</span></span></div>;
+  return <div className="cloud-dots" aria-label={tr("Connection status")}><span title={tr("This device’s network connection")}><i className={`cloud-dot ${online?'green':'red'}`}/><span>{online?tr("Online"):tr("Offline")}</span></span><span title={(!shared&&state?.lastError)||tr("Cloud status reflects the last successful server response. Sign in to the shop workspace to connect.")}><i className={`cloud-dot ${templateLocal?"green":dotColor}`}/><span>{templateLocal?tr("Device storage ready"):tr("Cloud {0}", label)}</span></span></div>;
 }

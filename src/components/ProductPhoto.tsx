@@ -1,3 +1,4 @@
+import {useTranslation} from "../lib/language";
 import {photoCatalogs, type CatalogPhotoCredit} from '../../shared/product-photo-catalog';
 import {useEffect, useState, type ImgHTMLAttributes} from 'react';
 import {base64ToBytes, mediaIdFromReference, type MediaRecord} from '../../shared/media';
@@ -52,6 +53,7 @@ async function photoSource(id: string, sourceId: string | null, retry = false): 
 
 /** Uploaded images stay available from the device database while offline. */
 export function ProductPhoto({src = '', alt = '', showCredit = false, ...props}: ImgHTMLAttributes<HTMLImageElement> & {showCredit?: boolean}) {
+  const tr = useTranslation();
   const id = mediaIdFromReference(src);
   const sourceId = sharedCloudSource();
   const local = Boolean(id && (sourceId || src.startsWith('local-image:') || isDeviceWorkspace()));
@@ -82,14 +84,14 @@ export function ProductPhoto({src = '', alt = '', showCredit = false, ...props}:
     return () => {active = false; window.removeEventListener('online', online); window.removeEventListener('cloud-contact', contact); if (acquired) acquired.users = Math.max(0, acquired.users - 1); trimCache();};
   }, [reference, local, id, sourceId]);
   const url = local ? resolved?.reference === reference ? resolved.url : '' : src.replace(bundledIllustration, '/images/grocery/$1.jpg');
-  if (!url) return <span className={`product-photo-empty ${props.className ?? ''}`} role="img" aria-label={alt || 'No product photo'} style={props.style} />;
+  if (!url) return <span className={`product-photo-empty ${props.className ?? ''}`} role="img" aria-label={alt || tr("No product photo")} style={props.style} />;
   const credit = resolved?.reference === reference ? resolved.credit : undefined;
   const catalog = credit && photoCatalogs[credit.catalog];
   const attribution = catalog ? "Photo by " + catalog.name + " contributors, CC BY-SA 3.0, resized" : undefined;
   return <>
     <img {...props} src={url} alt={alt} title={props.title ?? attribution} />
     {showCredit && credit && catalog && <a className="product-photo-attribution" title={attribution}
-      href={catalog.site + "/product/" + credit.barcode} target="_blank" rel="noreferrer">Photo credit</a>}
+      href={catalog.site + "/product/" + credit.barcode} target="_blank" rel="noreferrer">{tr("Photo credit")}</a>}
   </>;
 }
 export default ProductPhoto;

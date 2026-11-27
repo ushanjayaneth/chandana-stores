@@ -1,3 +1,4 @@
+import {useTranslation} from "../lib/language";
 import {useState, type KeyboardEvent} from 'react';
 import type {MenuItem} from '../../shared/types';
 import {isWeightedUnit, lineAmount} from '../../shared/retail';
@@ -17,6 +18,7 @@ export default function MeasuredSaleDialog({item, quantity, onClose, onConfirm}:
   onClose: () => void;
   onConfirm: (quantity: number) => void;
 }) {
+  const tr = useTranslation();
   const saleUnit = item.saleUnit || 'kg';
   const stockUnit = measurementUnit(saleUnit);
   const units = compatibleUnits(stockUnit).filter(unit => unit !== 'mg');
@@ -92,36 +94,36 @@ export default function MeasuredSaleDialog({item, quantity, onClose, onConfirm}:
   }
 
   const alternateUnit = stockUnit === 'kg' ? 'g' : stockUnit === 'g' ? 'kg' : stockUnit === 'L' ? 'ml' : 'L';
-  return <Modal title="Item quantity" subtitle={item.name} onClose={onClose}>
+  return <Modal title={tr("Item quantity")} subtitle={item.name} onClose={onClose}>
     <div className="number-pad measured-sale" onKeyDown={keyboard}>
       <div className="measured-rate">{money(item.price)} / {stockUnit}</div>
-      <div className="measured-mode" role="tablist" aria-label="Quantity entry mode">
-        <button type="button" role="tab" aria-selected={mode === 'quantity'} onClick={() => switchMode('quantity')}>{isMass ? 'Weight' : 'Quantity'}</button>
-        <button type="button" role="tab" aria-selected={mode === 'amount'} onClick={() => switchMode('amount')}>Amount</button>
+      <div className="measured-mode" role="tablist" aria-label={tr("Quantity entry mode")}>
+        <button type="button" role="tab" aria-selected={mode === 'quantity'} onClick={() => switchMode('quantity')}>{isMass ? tr("Weight") : tr("Quantity")}</button>
+        <button type="button" role="tab" aria-selected={mode === 'amount'} onClick={() => switchMode('amount')}>{tr("Amount")}</button>
       </div>
       <div className="measured-entry">
-        <label className="field"><span>{mode === 'amount' ? 'Amount (LKR)' : isMass ? 'Weight' : 'Quantity'}</span>
+        <label className="field"><span>{mode === 'amount' ? tr("Amount (LKR)") : isMass ? tr("Weight") : tr("Quantity")}</span>
           <input className="input" type="text" inputMode="decimal" autoComplete="off"
-            aria-label={mode === 'amount' ? 'Amount (LKR)' : isMass ? 'Weight' : 'Quantity'} value={text}
+            aria-label={mode === 'amount' ? tr("Amount (LKR)") : isMass ? tr("Weight") : tr("Quantity")} value={text}
             onChange={event => changeText(event.target.value)} onFocus={event => {event.currentTarget.select();setReplace(true);}}/>
         </label>
-        {mode === 'quantity' && <label className="field"><span>Unit</span>
-          <select className="input" aria-label="Unit" value={unit} onChange={event => switchUnit(event.target.value)}>
+        {mode === 'quantity' && <label className="field"><span>{tr("Unit")}</span>
+          <select className="input" aria-label={tr("Unit")} value={unit} onChange={event => switchUnit(event.target.value)}>
             {units.map(value => <option key={value} value={value}>{value}</option>)}
           </select>
         </label>}
       </div>
       <div className="measured-summary" aria-live="polite">
-        <div><span>Quantity</span><output aria-label="Calculated quantity">{quote ? `${number(quote.quantity)} ${stockUnit}` : '—'}</output></div>
+        <div><span>{tr("Quantity")}</span><output aria-label={tr("Calculated quantity")}>{quote ? `${number(quote.quantity)} ${stockUnit}` : '—'}</output></div>
         {quote && <small>{convertedQuantityFormat.format(convertQuantity(quote.quantity, stockUnit, alternateUnit))} {alternateUnit}</small>}
-        <div><span>Line total</span><output aria-label="Calculated total">{quote ? money(quote.amount) : '—'}</output></div>
-        {quote && quote.remainder > 0 && <small>Weight uses {number(minimum)} {stepUnit} steps. Final charge is {money(quote.remainder)} below the entered amount.</small>}
+        <div><span>{tr("Line total")}</span><output aria-label={tr("Calculated total")}>{quote ? money(quote.amount) : '—'}</output></div>
+        {quote && quote.remainder > 0 && <small>{tr("Weight uses")} {number(minimum)} {stepUnit} {tr("steps. Final charge is")} {money(quote.remainder)} {tr("below the entered amount.")}</small>}
       </div>
       <NumberPadKeys decimal onKey={key}/>
       {submitted && !quote && <div className="error-message" role="alert">{error}</div>}
       <div className="number-pad-actions">
-        <button className="button" type="button" onClick={() => key('clear')}>Clear</button>
-        <button className="button button-primary" type="button" onClick={apply}>Apply</button>
+        <button className="button" type="button" onClick={() => key('clear')}>{tr("Clear")}</button>
+        <button className="button button-primary" type="button" onClick={apply}>{tr("Apply")}</button>
       </div>
     </div>
   </Modal>;

@@ -1,3 +1,4 @@
+import {useTranslation} from "../lib/language";
 import {salePrice,lineAmount,type PriceMode} from '../../shared/retail';
 import {useState} from 'react';
 import {ArrowRight,PauseCircle,Search,Trash2} from 'lucide-react';
@@ -11,6 +12,7 @@ import {EmptyState,Modal} from '../components/ui';
 type HeldLine=HeldBill['lines'][number];
 
 export default function HeldBills({onResume}:{onResume:(bill:HeldBill)=>void}){
+  const tr = useTranslation();
   const {data,branchId,mutate,notify,navigate}=usePOS();
   const [search,setSearch]=useState('');
   const [discard,setDiscard]=useState<HeldBill|null>(null);
@@ -35,7 +37,7 @@ export default function HeldBills({onResume}:{onResume:(bill:HeldBill)=>void}){
     setBusy(true);
     try{
       await mutate(`/held-bills/${discard.id}`,{commandId:discardCommand},'DELETE');
-      notify('Held bill discarded. No stock or payment was changed.');
+      notify(tr("Held bill discarded. No stock or payment was changed."));
       setDiscard(null);
     }catch(error){notify((error as Error).message,'error');}
     finally{setBusy(false);}
@@ -43,39 +45,39 @@ export default function HeldBills({onResume}:{onResume:(bill:HeldBill)=>void}){
 
   return <>
     <div className="page-heading">
-      <div><div className="eyebrow">PAUSE NOW. PICK UP LATER.</div><h1>Held bills<span className="heading-period">.</span></h1><p className="page-subtitle">Saved customer bills awaiting confirmation. Stock changes only when sent.</p></div>
-      <button className="button button-primary" onClick={()=>navigate('pos')}>Point of sale <ArrowRight size={14}/></button>
+      <div><div className="eyebrow">PAUSE NOW. PICK UP LATER.</div><h1>{tr("Held bills")}<span className="heading-period">.</span></h1><p className="page-subtitle">Saved customer bills awaiting confirmation. Stock changes only when sent.</p></div>
+      <button className="button button-primary" onClick={()=>navigate('pos')}>{tr("Point of sale")} <ArrowRight size={14}/></button>
     </div>
     <div className="operations-toolbar">
-      <span className="muted" style={{fontSize:12}}>{bills.length} held {bills.length===1?'bill':'bills'} at this branch</span>
-      <div className="search-input compact"><Search size={14}/><input value={search} onChange={event=>setSearch(event.target.value)} aria-label="Search held bills" placeholder="Search held bills..."/></div>
+      <span className="muted" style={{fontSize:12}}>{bills.length} {tr("held")} {bills.length===1?tr("bill"):tr("bills")} {tr("at this branch")}</span>
+      <div className="search-input compact"><Search size={14}/><input value={search} onChange={event=>setSearch(event.target.value)} aria-label={tr("Search held bills")} placeholder={tr("Search held bills...")}/></div>
     </div>
     {bills.length?<div className="orders-grid held-bills-grid">{bills.map(bill=><article className="panel order-card" key={bill.id}>
-      <div className="order-card-head"><span className="order-type-icon"><PauseCircle size={17}/></span><div><h3>{bill.label}</h3><span>{bill.priceMode==='wholesale'?'Wholesale':'Retail'} / {bill.type==='takeaway'?'Counter sale':'Delivery'} · {dateTime(bill.updatedAt)}</span></div><span className="badge">Held</span></div>
+      <div className="order-card-head"><span className="order-type-icon"><PauseCircle size={17}/></span><div><h3>{bill.label}</h3><span>{bill.priceMode==='wholesale'?tr("Wholesale"):tr("Retail")} / {bill.type==='takeaway'?tr("Counter sale"):tr("Delivery")} · {dateTime(bill.updatedAt)}</span></div><span className="badge">{tr("Held")}</span></div>
       <div className="order-card-items">
         {bill.lines.slice(0,4).map((line,index)=><div key={`${line.menuItemId}-${index}`}>
           <span className="order-line-qty">{line.quantity}×</span>
-          <span>{data.menu.find(item=>item.id===line.menuItemId)?.name||'Unavailable product'}{lineDiscount(line,bill.priceMode)>0&&<small style={{display:'block'}}>Item discount − {money(lineDiscount(line,bill.priceMode))}</small>}</span>
+          <span>{data.menu.find(item=>item.id===line.menuItemId)?.name||tr("Unavailable product")}{lineDiscount(line,bill.priceMode)>0&&<small style={{display:'block'}}>{tr("Item discount −")} {money(lineDiscount(line,bill.priceMode))}</small>}</span>
           <span>{money(lineNet(line,bill.priceMode))}</span>
         </div>)}
-        {bill.lines.length>4&&<small>+ {bill.lines.length-4} more items</small>}
+        {bill.lines.length>4&&<small>+ {bill.lines.length-4} {tr("more items")}</small>}
       </div>
       {bill.note&&<p className="held-bill-note">{bill.note}</p>}
       {(itemDiscount(bill)>0||cartDiscount(bill)>0)&&<p className="held-price-note">{[itemDiscount(bill)>0?`Item discounts ${money(itemDiscount(bill))}`:'',cartDiscount(bill)>0?`Cart discount ${money(cartDiscount(bill))}`:''].filter(Boolean).join(' · ')}</p>}
-      <div className="order-card-total"><span>{bill.lines.reduce((sum,line)=>sum+line.quantity,0)} items</span><strong>{money(subtotal(bill))}</strong></div>
-      <p className="held-price-note">Current product prices · charges calculated on confirmation</p>
+      <div className="order-card-total"><span>{bill.lines.reduce((sum,line)=>sum+line.quantity,0)} {tr("items")}</span><strong>{money(subtotal(bill))}</strong></div>
+      <p className="held-price-note">{tr("Current product prices · charges calculated on confirmation")}</p>
       <div className="order-card-actions">
-        <button className="button button-primary button-small" onClick={()=>void open(bill)} disabled={!data.sync.hubOnline}>Resume bill <ArrowRight size={13}/></button>
-        <button className="icon-button" aria-label={`Discard ${bill.label}`} disabled={!data.sync.hubOnline} onClick={()=>{setDiscard(bill);setDiscardCommand(commandId());}}><Trash2 size={14}/></button>
+        <button className="button button-primary button-small" onClick={()=>void open(bill)} disabled={!data.sync.hubOnline}>{tr("Resume bill")} <ArrowRight size={13}/></button>
+        <button className="icon-button" aria-label={tr("Discard {0}", bill.label)} disabled={!data.sync.hubOnline} onClick={()=>{setDiscard(bill);setDiscardCommand(commandId());}}><Trash2 size={14}/></button>
       </div>
-    </article>)}</div>:<div className="panel"><EmptyState title="No bills on hold" description="Use Hold bill at the register to save an order without taking payment or deducting stock."/></div>}
-    {discard&&<Modal title="Discard held bill?" subtitle={discard.label} onClose={()=>{if(busy)return false;setDiscard(null);}}>
-      <p className="muted" style={{fontSize:12}}>This removes the saved draft from the held-bill list. It does not cancel a confirmed order, take a payment, or adjust stock.</p>
-      <div className="form-actions"><button className="button button-ghost" onClick={()=>setDiscard(null)} disabled={busy}>Keep bill</button><button className="button button-danger" onClick={()=>void remove()} disabled={busy}>{busy?'Discarding...':'Discard bill'}</button></div>
+    </article>)}</div>:<div className="panel"><EmptyState title={tr("No bills on hold")} description={tr("Use Hold bill at the register to save an order without taking payment or deducting stock.")}/></div>}
+    {discard&&<Modal title={tr("Discard held bill?")} subtitle={discard.label} onClose={()=>{if(busy)return false;setDiscard(null);}}>
+      <p className="muted" style={{fontSize:12}}>{tr("This removes the saved draft from the held-bill list. It does not cancel a confirmed order, take a payment, or adjust stock.")}</p>
+      <div className="form-actions"><button className="button button-ghost" onClick={()=>setDiscard(null)} disabled={busy}>{tr("Keep bill")}</button><button className="button button-danger" onClick={()=>void remove()} disabled={busy}>{busy?tr("Discarding..."):tr("Discard bill")}</button></div>
     </Modal>}
-    {resume&&<Modal title="A current draft is on this device" subtitle="Hold it from Point of sale first if you want to keep both orders." onClose={()=>setResume(null)}>
+    {resume&&<Modal title={tr("A current draft is on this device")} subtitle={tr("Hold it from Point of sale first if you want to keep both orders.")} onClose={()=>setResume(null)}>
       <p className="muted" style={{fontSize:12}}>Resuming this bill will replace the current device draft. The held bill stays safely saved until you confirm its order.</p>
-      <div className="form-actions"><button className="button button-ghost" onClick={()=>setResume(null)}>Keep current draft</button><button className="button button-primary" onClick={()=>{const selected=resume;setResume(null);onResume(selected);}}>Replace draft & resume</button></div>
+      <div className="form-actions"><button className="button button-ghost" onClick={()=>setResume(null)}>{tr("Keep current draft")}</button><button className="button button-primary" onClick={()=>{const selected=resume;setResume(null);onResume(selected);}}>{tr("Replace draft & resume")}</button></div>
     </Modal>}
   </>;
 }

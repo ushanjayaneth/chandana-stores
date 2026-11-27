@@ -1,4 +1,4 @@
-import {catalogImageUrl, matchingCatalogPhotos, photoBarcode, photoCatalogs, photoQuery, type CatalogPhoto, type CatalogPhotoCredit} from '../shared/product-photo-catalog.js';
+import {hemasPhotoUrl, relatedPhotoQuery, catalogImageUrl, matchingCatalogPhotos, photoBarcode, photoCatalogs, photoQuery, type CatalogPhoto, type CatalogPhotoCredit} from '../shared/product-photo-catalog.js';
 
 type Catalog = CatalogPhotoCredit['catalog'];
 const fields = 'code,product_name,brands,quantity,image_front_url,countries_tags';
@@ -44,6 +44,24 @@ async function catalogSearch(catalog: Catalog, query: string, barcode: string): 
   });
 }
 
+async function retailerSearch(query: string): Promise<CatalogPhoto[]> {
+  const brand = relatedPhotoQuery(query).split(' ')[0];
+  if (brand.length < 3) return [];
+  const url = new URL('https://hemasestore.com/wp-json/wc/store/v1/products');
+  url.search = new URLSearchParams({search: brand, per_page: '24', _fields: 'name,permalink,images'}).toString();
+  const response = await fetch(url, {signal: AbortSignal.timeout(4_500), redirect: 'error'});
+  if (!response.ok) return [];
+  const rows = await response.json() as {name?: string; permalink?: string; images?: {src?: string}[]}[];
+  if (!Array.isArray(rows)) return [];
+  return rows.flatMap(row => {
+    const name = (row.name ?? '').trim().replace(/(\p{L})(\d)/gu, '$1 $2').slice(0, 160);
+    const image = hemasPhotoUrl(row.images?.[0]?.src ?? '');
+    const productUrl = row.permalink ?? '';
+    if (!name || !image || !/^https:\/\/hemasestore\.com\/product\/[\w-]+\/?$/.test(productUrl)) return [];
+    return [{name, image, localMarket: true, retailer: {productUrl}}];
+  });
+}
+
 export async function findProductPhotos(input: {query: string; barcode: string}): Promise<CatalogPhoto[]> {
   const query = photoQuery(input.query.slice(0, 120));
   const barcode = photoBarcode(input.barcode.slice(0, 32));
@@ -52,14 +70,46 @@ export async function findProductPhotos(input: {query: string; barcode: string})
   const existing = cache.get(key);
   if (existing && existing.expires > Date.now()) return existing.result;
   const result = (async () => {
-    const searches = await Promise.allSettled(profiles.map(catalog => catalogSearch(catalog, query, barcode)));
+    const requests = profiles.map(catalog => catalogSearch(catalog, query, barcode));
+    if (query.length >= 3 && !barcode) requests.push(retailerSearch(query));
+    const searches = await Promise.allSettled(requests);
     const results = searches.flatMap(search => search.status === 'fulfilled' ? search.value : []);
     if (barcode && !results.length && query.length >= 2) return findProductPhotos({query, barcode: ''});
     if (searches.every(search => search.status === 'rejected')) throw new Error('Photo catalogs are temporarily unavailable.');
-    return matchingCatalogPhotos(results, query, barcode).slice(0, 30);
+    const matches = matchingCatalogPhotos(results, query, barcode);
+    const related = relatedPhotoQuery(query);
+    if (!matches.length && related && related !== query) {
+      const smallPacks = results.filter(photo => photo.retailer && /\b\d{1,2}g\b/i.test(photoQuery(photo.name)) &&
+        !/\b(?:free|bundle|toothbrush)\b/i.test(photo.name));
+      return matchingCatalogPhotos(smallPacks, related, '').slice(0, 12);
+    }
+    return matches.slice(0, 30);
   })();
   if (cache.size >= 100) cache.delete(cache.keys().next().value!);
   cache.set(key, {result, expires: Date.now() + 300_000});
   void result.catch(() => { if (cache.get(key)?.result === result) cache.delete(key); });
   return result;
+}
+
+export async function downloadRetailerPhoto(image: string) {
+  const url = hemasPhotoUrl(image);
+  if (!url) return null;
+  const response = await fetch(url, {signal: AbortSignal.timeout(5_000), redirect: 'error'});
+  const mime = response.headers.get('content-type')?.split(';')[0];
+  const maximum = 5_000_000;
+  if (!response.ok || !response.body || !mime || !['image/jpeg', 'image/png', 'image/webp'].includes(mime) ||
+      Number(response.headers.get('content-length')) > maximum) return null;
+  const chunks: Uint8Array[] = [];
+  const reader = response.body.getReader();
+  let size = 0;
+  try {
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      size += value.length;
+      if (size > maximum) { await reader.cancel(); return null; }
+      chunks.push(value);
+    }
+  } finally { reader.releaseLock(); }
+  return {mime, bytes: Buffer.concat(chunks, size)};
 }

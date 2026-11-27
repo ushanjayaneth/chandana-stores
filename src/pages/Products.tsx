@@ -1,3 +1,4 @@
+import {useTranslation} from "../lib/language";
 import {saleUnits} from '../../shared/retail';
 import {productCost} from '../../shared/costing';
 import {
@@ -52,6 +53,7 @@ function Dialog({
   onClose: () => void;
   busy?: boolean;
 }) {
+  const tr = useTranslation();
   const closeRef = useRef(onClose);
   const busyRef = useRef(busy);
   const dialogRef = useRef<HTMLElement>(null);
@@ -126,7 +128,7 @@ function Dialog({
           <button
             type="button"
             className="icon-button"
-            aria-label="Close dialog"
+            aria-label={tr("Close dialog")}
             disabled={busy}
             onClick={onClose}
           >
@@ -163,6 +165,7 @@ export function CategoryDialog({
   onClose: () => void;
   onCreated?: (id: string) => void;
 }) {
+  const tr = useTranslation();
   const { mutate, refresh, notify } = usePOS();
   const [requestId] = useState(commandId);
   const [busy, setBusy] = useState(false);
@@ -182,13 +185,13 @@ export function CategoryDialog({
       });
       await refresh();
       onCreated?.(result.category.id);
-      notify("Category added");
+      notify(tr("Category added"));
       onClose();
     } catch (cause) {
       setError(
         cause instanceof Error
           ? cause.message
-          : "Unable to create the category.",
+          : tr("Unable to create the category."),
       );
     } finally {
       setBusy(false);
@@ -197,32 +200,32 @@ export function CategoryDialog({
 
   return (
     <Dialog
-      title="Add category"
-      subtitle="Organise your products into clear, useful groups."
+      title={tr("Add category")}
+      subtitle={tr("Organise your products into clear, useful groups.")}
       onClose={onClose}
       busy={busy}
     >
       <form onSubmit={submit}>
         <div className="form-grid">
-          <Field label="Category name" full>
+          <Field label={tr("Category name")} full>
             <input
               className="input"
               name="name"
               required
               minLength={2}
               maxLength={80}
-              placeholder="e.g. Fresh juices"
+              placeholder={tr("e.g. Fresh juices")}
               autoComplete="off"
             />
           </Field>
-          <Field label="Category icon" full>
+          <Field label={tr("Category icon")} full>
             <select className="select" name="icon" defaultValue="utensils">
-              <option value="utensils">Food & meals</option>
-              <option value="coffee">Drinks</option>
-              <option value="flame">Grill & hot food</option>
-              <option value="cake">Desserts</option>
-              <option value="package">Retail products</option>
-              <option value="leaf">Vegetarian</option>
+              <option value="utensils">{tr("Food & meals")}</option>
+              <option value="coffee">{tr("Drinks")}</option>
+              <option value="flame">{tr("Grill & hot food")}</option>
+              <option value="cake">{tr("Desserts")}</option>
+              <option value="package">{tr("Retail products")}</option>
+              <option value="leaf">{tr("Vegetarian")}</option>
             </select>
           </Field>
         </div>
@@ -237,11 +240,9 @@ export function CategoryDialog({
             type="button"
             onClick={onClose}
             disabled={busy}
-          >
-            Cancel
-          </button>
+          >{tr("Cancel")}</button>
           <button className="button button-primary" disabled={busy}>
-            {busy ? "Saving…" : "Add category"}
+            {busy ? tr("Saving…") : tr("Add category")}
             <Check size={15} />
           </button>
         </div>
@@ -259,6 +260,7 @@ export function ProductDialog({
   categoryId?: string;
   item?: MenuItem;
 }) {
+  const tr = useTranslation();
   const { data, branchId, mutate, refresh, notify } = usePOS();
   const product = item as Product | undefined;
   const linkedStock = item
@@ -330,11 +332,11 @@ export function ProductDialog({
       ...(!item || minimumEdited ? {reorderLevel: text("minimum") === "" ? 5 : Number(text("minimum"))} : {}),
     };
     if (!selectedCategory) {
-      setError("Choose or create a category first.");
+      setError(tr("Choose or create a category first."));
       return;
     }
     if (!isProductImageReference(payload.image)) {
-      setError("Use an HTTPS image link or upload a product photo.");
+      setError(tr("Use an HTTPS image link or upload a product photo."));
       return;
     }
     setBusy(true);
@@ -387,14 +389,14 @@ export function ProductDialog({
         stockSaved.current = true;
       }
       await refresh();
-      notify(item ? "Product updated" : "Product added");
+      notify(item ? tr("Product updated") : tr("Product added"));
       onClose();
     } catch (cause) {
       const message =
         cause instanceof Error ? cause.message : "Unable to save this product.";
       setError(
         savedProductId.current && !item
-          ? `Product saved. Stock setup needs attention: ${message} Retry to finish.`
+          ? tr("Product saved. Stock setup needs attention: {0} Retry to finish.", message)
           : message,
       );
     } finally {
@@ -405,14 +407,14 @@ export function ProductDialog({
   return (
     <>
       <Dialog
-        title={item ? "Edit product" : "Add product"}
-        subtitle="Menu details apply across branches. Stock quantities apply to the selected branch."
+        title={item ? tr("Edit product") : tr("Add product")}
+        subtitle={tr("Menu details apply across branches. Stock quantities apply to the selected branch.")}
         onClose={onClose}
         busy={busy || photoBusy}
       >
         <form onSubmit={submit}>
           <div className="form-grid">
-            <Field label="Product name" full>
+            <Field label={tr("Product name")} full>
               <input
                 className="input"
                 name="name"
@@ -420,19 +422,19 @@ export function ProductDialog({
                 minLength={2}
                 maxLength={120}
                 defaultValue={product?.name || ""}
-                placeholder="e.g. Chicken fried rice"
+                placeholder={tr("e.g. Chicken fried rice")}
               />
             </Field>
-            <Field label="Category">
+            <Field label={tr("Category")}>
               <div className="product-category-field">
                 <select
                   className="select"
-                  aria-label="Category"
+                  aria-label={tr("Category")}
                   value={selectedCategory}
                   onChange={(event) => setSelectedCategory(event.target.value)}
                   required
                 >
-                  <option value="">Choose category</option>
+                  <option value="">{tr("Choose category")}</option>
                   {data.categories.map((category) => (
                     <option value={category.id} key={category.id}>
                       {category.name}
@@ -442,14 +444,14 @@ export function ProductDialog({
                 <button
                   className="icon-button"
                   type="button"
-                  aria-label="Add category"
+                  aria-label={tr("Add category")}
                   onClick={() => setCategoryDialog(true)}
                 >
                   <Plus size={16} />
                 </button>
               </div>
             </Field>
-            <Field label="Stock tracking">
+            <Field label={tr("Stock tracking")}>
               <select
                 className="select"
                 value={stockMode}
@@ -457,11 +459,11 @@ export function ProductDialog({
                   setStockMode(event.target.value as MenuItem["stockMode"])
                 }
               >
-                <option value="prepared">Track product quantity</option>
-                <option value="untracked">No stock tracking</option>
+                <option value="prepared">{tr("Track product quantity")}</option>
+                <option value="untracked">{tr("No stock tracking")}</option>
               </select>
             </Field>
-            <Field label="Selling price (LKR)">
+            <Field label={tr("Selling price (LKR)")}>
               <input
                 className="input"
                 name="price"
@@ -474,8 +476,8 @@ export function ProductDialog({
                 placeholder="0.00"
               />
             </Field>
-            <Field label="Wholesale price (LKR)"><input className="input" name="wholesalePrice" type="number" min="0.01" step="0.01" defaultValue={product?.wholesalePrice?String(product.wholesalePrice/100):''} placeholder="Use retail price"/><small>Optional trade price per sale unit. Leave blank to use retail.</small></Field>
-            <Field label="Cost per unit (LKR)">
+            <Field label={tr("Wholesale price (LKR)")}><input className="input" name="wholesalePrice" type="number" min="0.01" step="0.01" defaultValue={product?.wholesalePrice?String(product.wholesalePrice/100):''} placeholder={tr("Use retail price")}/><small>{tr("Optional trade price per sale unit. Leave blank to use retail.")}</small></Field>
+            <Field label={tr("Cost per unit (LKR)")}>
               <input
                 className="input"
                 name="cost"
@@ -487,12 +489,12 @@ export function ProductDialog({
                 onChange={(event) => setPurchaseCost(event.target.value)}
               />
             </Field>
-            <div className="product-profit-preview product-field-full" aria-label="Product profit preview">
-              <span>Gross profit per unit <strong>{money(previewPrice - previewCost)}</strong></span>
-              <span>Gross margin <strong>{previewPrice > 0 ? `${((previewPrice - previewCost) / previewPrice * 100).toFixed(1)}%` : '—'}</strong></span>
-              <small>{stockMode === 'recipe' ? 'Use the recipe editor to calculate ingredient cost per portion. This preview uses the entered unit cost.' : 'Before discounts, tax and operating expenses. Sales retain their cost when confirmed.'}</small>
+            <div className="product-profit-preview product-field-full" aria-label={tr("Product profit preview")}>
+              <span>{tr("Gross profit per unit")} <strong>{money(previewPrice - previewCost)}</strong></span>
+              <span>{tr("Gross margin")} <strong>{previewPrice > 0 ? `${((previewPrice - previewCost) / previewPrice * 100).toFixed(1)}%` : '—'}</strong></span>
+              <small>{stockMode === 'recipe' ? 'Use the recipe editor to calculate ingredient cost per portion. This preview uses the entered unit cost.' : tr("Before discounts, tax and operating expenses. Sales retain their cost when confirmed.")}</small>
             </div>
-            <Field label="Barcode (optional)">
+            <Field label={tr("Barcode (optional)")}>
               <div className="product-barcode-field">
                 <Barcode size={16} />
                 <input
@@ -500,28 +502,28 @@ export function ProductDialog({
                   name="barcode"
                   maxLength={80}
                   defaultValue={product?.barcode || ""}
-                  placeholder="Scan or enter barcode"
+                  placeholder={tr("Scan or enter barcode")}
                   autoComplete="off"
                 />
               </div>
             </Field>
-            <Field label="SKU (optional)">
+            <Field label={tr("SKU (optional)")}>
               <input
                 className="input product-sku"
                 name="sku"
                 maxLength={60}
                 defaultValue={product?.sku || ""}
-                placeholder="e.g. MART-001"
+                placeholder={tr("e.g. MART-001")}
                 autoComplete="off"
               />
             </Field>
-            <Field label="Sale unit"><select className="select" aria-label="Sale unit" value={stockUnit} disabled={Boolean(linkedStock)} onChange={event=>setStockUnit(event.target.value)}>{saleUnits.map(unit=><option key={unit} value={unit}>{unit}</option>)}</select><small>Prices and stock use this same unit. Weighed items accept three decimal places.</small></Field>
-            <Field label="Low stock alert at">
+            <Field label={tr("Sale unit")}><select className="select" aria-label={tr("Sale unit")} value={stockUnit} disabled={Boolean(linkedStock)} onChange={event=>setStockUnit(event.target.value)}>{saleUnits.map(unit=><option key={unit} value={unit}>{unit}</option>)}</select><small>{tr("Prices and stock use this same unit. Weighed items accept three decimal places.")}</small></Field>
+            <Field label={tr("Low stock alert at")}>
               <input
                 className="input"
                 name="minimum"
                 onChange={() => setMinimumEdited(true)}
-                aria-label="Low stock alert at"
+                aria-label={tr("Low stock alert at")}
                 type="number"
                 min="0"
                 max="100000"
@@ -531,12 +533,10 @@ export function ProductDialog({
                 }
                 placeholder="5"
               />
-              <small className="product-field-help">
-                Alert at this quantity or below. Leave blank to use 5 units.
-              </small>
+              <small className="product-field-help">{tr("Alert at this quantity or below. Leave blank to use 5 units.")}</small>
             </Field>
             <PhotoPicker ref={photoPicker} value={image} onChange={setImage} onBusyChange={setPhotoBusy} disabled={busy} />
-            <Field label="Description (optional)" full>
+            <Field label={tr("Description (optional)")} full>
               <textarea
                 className="input"
                 name="description"
@@ -551,7 +551,7 @@ export function ProductDialog({
                 name="enabled"
                 defaultChecked={product?.enabled !== false}
               />
-              <span>Available on the menu</span>
+              <span>{tr("Available on the menu")}</span>
             </label>
           </div>
           {stockMode === "prepared" && (
@@ -565,20 +565,20 @@ export function ProductDialog({
                 <span>
                   <strong>
                     {linkedStock
-                      ? "Update branch stock count"
-                      : "Set up branch stock"}
+                      ? tr("Update branch stock count")
+                      : tr("Set up branch stock")}
                   </strong>
-                  <small>{data.branch.name} · this location only</small>
+                  <small>{data.branch.name} {tr("· this location only")}</small>
                 </span>
               </label>
               {manageStock && (
                 <div className="form-grid">
-                  <Field label="Best-before date"><input className="input" type="date" aria-label="Best-before date" value={expiryDate} onChange={event=>setExpiryDate(event.target.value)}/><small>Optional date for the current stock. Manage separate batches outside this field.</small></Field>
+                  <Field label={tr("Best-before date")}><input className="input" type="date" aria-label={tr("Best-before date")} value={expiryDate} onChange={event=>setExpiryDate(event.target.value)}/><small>{tr("Optional date for the current stock. Manage separate batches outside this field.")}</small></Field>
                   <Field
                     label={
                       linkedStock
-                        ? `Counted stock (${linkedStock.unit})`
-                        : "Opening stock quantity"
+                        ? tr("Counted stock ({0})", linkedStock.unit)
+                        : tr("Opening stock quantity")
                     }
                     full
                   >
@@ -596,8 +596,7 @@ export function ProductDialog({
                       }}
                     />
                     {linkedStock && (
-                      <small>
-                        Current recorded stock: {number(linkedStock.quantity)}{" "}
+                      <small>{tr("Current recorded stock:")} {number(linkedStock.quantity)}{" "}
                         {linkedStock.unit}. The difference is recorded as an
                         audited adjustment.
                       </small>
@@ -625,11 +624,9 @@ export function ProductDialog({
               type="button"
               onClick={onClose}
               disabled={busy || photoBusy}
-            >
-              Cancel
-            </button>
+            >{tr("Cancel")}</button>
             <button className="button button-primary" disabled={busy || photoBusy}>
-              {busy ? "Saving…" : item ? "Save product" : "Add product"}
+              {busy ? tr("Saving…") : item ? tr("Save product") : tr("Add product")}
               <Check size={15} />
             </button>
           </div>
@@ -646,7 +643,8 @@ export function ProductDialog({
 }
 
 export default function Products() {
-  const { data, branchId } = usePOS();
+  const tr = useTranslation();
+  const { data, branchId, locale } = usePOS();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
@@ -664,7 +662,7 @@ export default function Products() {
     const stockState = stockStateFor(product);
     return (
       (category === "all" || product.categoryId === category) &&
-      `${product.name} ${product.description} ${product.barcode || ""} ${product.sku || ""}`
+      `${product.name} ${product.nameSi} ${product.description} ${product.barcode || ""} ${product.sku || ""}`
         .toLowerCase()
         .includes(search.toLowerCase()) &&
       (stockFilter === "all" ||
@@ -730,34 +728,25 @@ export default function Products() {
       <header className="page-heading">
         <div>
           <div className="eyebrow">
-            <span className="status-dot" /> YOUR PRODUCT CATALOGUE
-          </div>
-          <h1>Products</h1>
-          <p className="page-subtitle">
-            Every dish, every detail. Organised and ready to sell.
-          </p>
+            <span className="status-dot" /> {tr("YOUR PRODUCT CATALOGUE")}</div>
+          <h1>{tr("Products")}</h1>
+          <p className="page-subtitle">{tr("Every dish, every detail. Organised and ready to sell.")}</p>
         </div>
         <div className="products-heading-actions">
           <button className="button button-ghost" onClick={exportProducts}>
-            <Download size={15} />
-            Export
-          </button>
+            <Download size={15} />{tr("Export")}</button>
           {canEdit && (
             <>
               <button
                 className="button button-ghost"
                 onClick={() => setCategoryDialog(true)}
               >
-                <Layers3 size={15} />
-                Add category
-              </button>
+                <Layers3 size={15} />{tr("Add category")}</button>
               <button
                 className="button button-primary"
                 onClick={() => setEditing(null)}
               >
-                <Plus size={16} />
-                Add product
-              </button>
+                <Plus size={16} />{tr("Add product")}</button>
             </>
           )}
         </div>
@@ -765,37 +754,29 @@ export default function Products() {
       <div className="products-summary">
         <div className="panel product-summary-card">
           <span>
-            <Package size={17} />
-            Total products
-          </span>
+            <Package size={17} />{tr("Total products")}</span>
           <strong>{number(products.length)}</strong>
-          <small>Your full catalogue</small>
+          <small>{tr("Your full catalogue")}</small>
         </div>
         <div className="panel product-summary-card">
           <span>
-            <Layers3 size={17} />
-            Categories
-          </span>
+            <Layers3 size={17} />{tr("Categories")}</span>
           <strong>{number(data.categories.length)}</strong>
-          <small>Made easy to find</small>
+          <small>{tr("Made easy to find")}</small>
         </div>
         <div className="panel product-summary-card">
           <span>
-            <Tag size={17} />
-            Available now
-          </span>
+            <Tag size={17} />{tr("Available now")}</span>
           <strong>
             {number(products.filter((product) => product.available).length)}
           </strong>
-          <small>Ready for your next order</small>
+          <small>{tr("Ready for your next order")}</small>
         </div>
         <div className="panel product-summary-card">
           <span>
-            <Barcode size={17} />
-            Low stock
-          </span>
+            <Barcode size={17} />{tr("Low stock")}</span>
           <strong>{number(lowStock.length)}</strong>
-          <small>At or below each product's alert level</small>
+          <small>{tr("At or below each product's alert level")}</small>
         </div>
       </div>
       <section className="panel products-catalogue">
@@ -804,8 +785,8 @@ export default function Products() {
             <Search size={16} />
             <input
               type="search"
-              aria-label="Search products"
-              placeholder="Search name, SKU or barcode…"
+              aria-label={tr("Search products")}
+              placeholder={tr("Search name, SKU or barcode…")}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
@@ -814,11 +795,11 @@ export default function Products() {
             <label>
               <Layers3 size={14} />
               <select
-                aria-label="Product category"
+                aria-label={tr("Product category")}
                 value={category}
                 onChange={(event) => setCategory(event.target.value)}
               >
-                <option value="all">All categories</option>
+                <option value="all">{tr("All categories")}</option>
                 {data.categories.map((category) => (
                   <option value={category.id} key={category.id}>
                     {category.name}
@@ -830,13 +811,13 @@ export default function Products() {
             <label>
               <SlidersHorizontal size={14} />
               <select
-                aria-label="Product stock status"
+                aria-label={tr("Product stock status")}
                 value={stockFilter}
                 onChange={(event) => setStockFilter(event.target.value)}
               >
-                <option value="all">All stock statuses</option>
-                <option value="low">Low stock</option>
-                <option value="unavailable">Unavailable</option>
+                <option value="all">{tr("All stock statuses")}</option>
+                <option value="low">{tr("Low stock")}</option>
+                <option value="unavailable">{tr("Unavailable")}</option>
               </select>
               <ChevronDown size={13} />
             </label>
@@ -846,12 +827,12 @@ export default function Products() {
           <table className="data-table products-table">
             <thead>
               <tr>
-                <th>Product</th>
-                <th>Barcode / SKU</th>
-                <th>Selling price</th>
-                <th>Unit cost</th>
-                <th>Branch stock</th>
-                <th>Status</th>
+                <th>{tr("Product")}</th>
+                <th>{tr("Barcode / SKU")}</th>
+                <th>{tr("Selling price")}</th>
+                <th>{tr("Unit cost")}</th>
+                <th>{tr("Branch stock")}</th>
+                <th>{tr("Status")}</th>
                 <th />
               </tr>
             </thead>
@@ -870,18 +851,18 @@ export default function Products() {
                           )}
                         </div>
                         <div>
-                          <strong>{product.name}</strong>
+                          <strong>{locale === "si" && product.nameSi ? product.nameSi : product.name}</strong>
                           <small>
                             {data.categories.find(
                               (category) => category.id === product.categoryId,
-                            )?.name || "Uncategorised"}
+                            )?.name || tr("Uncategorised")}
                           </small>
                         </div>
                       </div>
                     </td>
                     <td>
                       <div className="product-identifiers">
-                        <span>{product.barcode || "No barcode"}</span>
+                        <span>{product.barcode || tr("No barcode")}</span>
                         <small>{product.sku || "—"}</small>
                       </div>
                     </td>
@@ -898,17 +879,17 @@ export default function Products() {
                             {number(stock.quantity)} <span>{stock.unit}</span>
                           </strong>
                           <small>
-                            {stock.low ? "Low stock" : "Alert"} at {number(stock.threshold)}
-                            {product.stockMode === "recipe" ? " · From recipe ingredients" : ""}
+                            {stock.low ? tr("Low stock") : tr("Alert")} {tr("at")} {number(stock.threshold)}
+                            {product.stockMode === "recipe" ? tr("· From recipe ingredients") : ""}
                           </small>
                         </div>
                       ) : (
                         <span className="product-untracked">
                           {product.stockMode === "recipe"
-                            ? "Recipe ingredients"
+                            ? tr("Recipe ingredients")
                             : product.stockMode === "prepared"
-                              ? "Stock not set up"
-                              : "Not tracked"}
+                              ? tr("Stock not set up")
+                              : tr("Not tracked")}
                         </span>
                       )}
                     </td>
@@ -918,22 +899,20 @@ export default function Products() {
                       >
                         <i />
                         {product.enabled === false
-                          ? "Disabled"
+                          ? tr("Disabled")
                           : product.available
-                            ? "Available"
-                            : "Out of stock"}
+                            ? tr("Available")
+                            : tr("Out of stock")}
                       </span>
                     </td>
                     <td>
                       {canEdit && (
                         <button
                           className="button button-ghost button-small"
-                          aria-label={`Edit ${product.name}`}
+                          aria-label={tr("Edit {0}", product.name)}
                           onClick={() => setEditing(product)}
                         >
-                          <SlidersHorizontal size={13} />
-                          Edit
-                        </button>
+                          <SlidersHorizontal size={13} />{tr("Edit")}</button>
                       )}
                     </td>
                   </tr>
@@ -947,8 +926,8 @@ export default function Products() {
             <div className="empty-icon">
               <Search size={25} />
             </div>
-            <h3>No products found</h3>
-            <p>Try another name, barcode or category.</p>
+            <h3>{tr("No products found")}</h3>
+            <p>{tr("Try another name, barcode or category.")}</p>
             <button
               className="button button-ghost"
               onClick={() => {
@@ -956,18 +935,14 @@ export default function Products() {
                 setCategory("all");
                 setStockFilter("all");
               }}
-            >
-              Reset filters
-            </button>
+            >{tr("Reset filters")}</button>
           </div>
         )}
         <footer className="products-table-footer">
           <span>
-            {filtered.length} of {products.length} products
-          </span>
+            {filtered.length} {tr("of")} {products.length} {tr("products")}</span>
           <span>
-            <ShieldCheck size={13} />
-            Stock shown for {data.branch.name}
+            <ShieldCheck size={13} />{tr("Stock shown for")} {data.branch.name}
           </span>
         </footer>
       </section>

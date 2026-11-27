@@ -20,7 +20,7 @@ export default defineConfig({
     },
     workbox: {
       clientsClaim:true,
-      globPatterns:['**/*.{js,css,html}', 'images/grocery/*.jpg'], maximumFileSizeToCacheInBytes: 4_000_000,
+      globPatterns:['**/*.{js,css,html}', '**/noto-sans-sinhala-sinhala-*.woff2', 'images/grocery/*.jpg'], maximumFileSizeToCacheInBytes: 4_000_000,
       navigateFallbackDenylist:[/^\/api\//], cleanupOutdatedCaches:true,
       runtimeCaching:[{
         urlPattern:({request,url})=>request.destination==='font' && url.origin===self.location.origin,

@@ -1,3 +1,4 @@
+import {useTranslation} from "../lib/language";
 import {useState, useSyncExternalStore} from 'react';
 import {Check, Download, Smartphone} from 'lucide-react';
 import {Modal} from './ui';
@@ -49,6 +50,7 @@ function installInstructions() {
 }
 
 export function InstallAppButton({className = 'button button-small'}: {className?: string} = {}) {
+  const tr = useTranslation();
   const isAppInstalled = useSyncExternalStore(subscribe, isInstalled);
   const [instructions, setInstructions] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -73,22 +75,23 @@ export function InstallAppButton({className = 'button button-small'}: {className
 
   if (isAppInstalled) return null;
   return <>
-    <button type="button" className={className} title="Install app" aria-label="Install app" disabled={busy} onClick={() => void install()}>
-      <Download size={15} /><span>{busy ? 'Installing…' : 'Install app'}</span>
+    <button type="button" className={className} title={tr("Install app")} aria-label={tr("Install app")} disabled={busy} onClick={() => void install()}>
+      <Download size={15} /><span>{busy ? tr("Installing…") : tr("Install app")}</span>
     </button>
-    {instructions && <Modal title="Install app" subtitle={installInstructions()} onClose={() => setInstructions(false)}>
-      <div className="form-actions"><button type="button" className="button button-primary" onClick={() => setInstructions(false)}>Done</button></div>
+    {instructions && <Modal title={tr("Install app")} subtitle={installInstructions()} onClose={() => setInstructions(false)}>
+      <div className="form-actions"><button type="button" className="button button-primary" onClick={() => setInstructions(false)}>{tr("Done")}</button></div>
     </Modal>}
   </>;
 }
 
 export function AppInstallSettings() {
+  const tr = useTranslation();
   const isAppInstalled = useSyncExternalStore(subscribe, isInstalled);
   return <div className="storage-install">
     <Smartphone size={20} />
     <div>
-      <strong>{isAppInstalled ? 'App installed' : 'Install on this device'}</strong>
-      <p>{isAppInstalled ? 'Open Chandana Stores from your Home Screen or app list.' : 'Add Chandana Stores to your Home Screen or app list.'}</p>
+      <strong>{isAppInstalled ? tr("App installed") : tr("Install on this device")}</strong>
+      <p>{isAppInstalled ? tr("Open Chandana Stores from your Home Screen or app list.") : tr("Add Chandana Stores to your Home Screen or app list.")}</p>
     </div>
     {isAppInstalled ? <Check size={18} className="storage-positive" /> : <InstallAppButton />}
   </div>;

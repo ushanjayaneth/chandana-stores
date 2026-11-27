@@ -51,6 +51,28 @@ html, body, #root {
   }
 }
 
+:root[lang="si"] {
+  font-family: "Noto Sans Sinhala", "Inter Variable", sans-serif;
+}
+
+.login-controls {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.language-toggle {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 12px;
+  padding-inline: 9px;
+}
+
+.language-toggle[lang="si"] { font-family: "Noto Sans Sinhala", sans-serif; }
+:root[lang="si"] :is(.nav-item, .breadcrumb, .field > span, .page-heading) { overflow-wrap: anywhere; }
+:root[lang="si"] .nav-item { white-space: normal; }
+
 @media (max-width: 760px) {
   .topbar {
     display: grid;
@@ -68,7 +90,7 @@ html, body, #root {
   .topbar-actions {
     min-width: 0;
     display: grid;
-    grid-template-columns: minmax(44px, 1fr) minmax(0, 1.4fr) 40px;
+    grid-template-columns: minmax(43px, 1.1fr) auto minmax(36px, 1fr) 40px;
     gap: 6px;
   }
 

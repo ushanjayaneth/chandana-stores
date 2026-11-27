@@ -1,3 +1,4 @@
+import {useTranslation} from "../lib/language";
 import {printPeripheralText} from '../lib/peripherals';
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
@@ -46,6 +47,7 @@ export function Orders({
   onReceipt: (id: string) => void;
   historyView?: boolean;
 }) {
+  const tr = useTranslation();
   const { data, mutate, notify } = usePOS();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState(historyView ? "all" : "active");
@@ -126,7 +128,7 @@ export function Orders({
     a.download = `${historyView ? "sales-history" : "orders"}-${data.branch.code}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    notify(historyView ? "Sales history exported." : "Orders exported.");
+    notify(historyView ? tr("Sales history exported.") : tr("Orders exported."));
   }
   async function cancel(reason: string) {
     if (!cancelOrder) return;
@@ -143,7 +145,7 @@ export function Orders({
         "PATCH",
       );
       notify(
-        "Order cancelled. Stock disposition is recorded in the audit trail.",
+        tr("Order cancelled. Stock disposition is recorded in the audit trail."),
       );
       setCancelOrder(null);
     } catch (err) {
@@ -157,25 +159,24 @@ export function Orders({
       <div className="page-heading">
         <div>
           <div className="eyebrow">
-            {historyView ? "YOUR SALES RECORD" : "SALES, AT A GLANCE"}
+            {historyView ? tr("YOUR SALES RECORD") : tr("SALES, AT A GLANCE")}
           </div>
           <h1>
-            {historyView ? "Sales history" : "Orders"}
+            {historyView ? tr("Sales history") : tr("Orders")}
             <span className="heading-period">.</span>
           </h1>
           <p className="page-subtitle">
             {historyView
-              ? "Review payments, completed and cancelled bills. Reprint any receipt."
-              : "Review sales, payments and authorized refunds."}
+              ? tr("Review payments, completed and cancelled bills. Reprint any receipt.")
+              : tr("Review sales, payments and authorized refunds.")}
           </p>
         </div>
         <button className="button" onClick={exportOrders}>
-          <Download size={14} /> Export
-        </button>
+          <Download size={14} /> {tr("Export")}</button>
       </div>
       <div className="operation-summary">
         <div className="panel operation-stat">
-          <span>{historyView ? "Matching bills" : "Open orders"}</span>
+          <span>{historyView ? tr("Matching bills") : tr("Open orders")}</span>
           <strong>
             {(historyView ? orders.length : active.length)
               .toString()
@@ -186,7 +187,7 @@ export function Orders({
           </span>
         </div>
         <div className="panel operation-stat">
-          <span>{historyView ? "Settled bills" : "Awaiting completion"}</span>
+          <span>{historyView ? tr("Settled bills") : tr("Awaiting completion")}</span>
           <strong>
             {(historyView ? orders : data.orders)
               .filter((o) =>
@@ -202,7 +203,7 @@ export function Orders({
           </span>
         </div>
         <div className="panel operation-stat">
-          <span>{historyView ? "Cancelled bills" : "Ready for pickup"}</span>
+          <span>{historyView ? tr("Cancelled bills") : tr("Ready for pickup")}</span>
           <strong>
             {(historyView ? orders : data.orders)
               .filter((o) => o.status === (historyView ? "cancelled" : "ready"))
@@ -215,7 +216,7 @@ export function Orders({
         </div>
         <div className="panel operation-stat">
           <span>
-            {historyView ? "Payments less refunds" : "Outstanding balance"}
+            {historyView ? tr("Payments less refunds") : tr("Outstanding balance")}
           </span>
           <strong className="stat-money">
             {money(
@@ -236,18 +237,18 @@ export function Orders({
         <div className="filter-tabs">
           {(historyView
             ? [
-                { id: "all", label: "All history", count: source.length },
-                { id: "paid", label: "Settled" },
-                { id: "completed", label: "Completed" },
-                { id: "refunded", label: "Refunded" },
-                { id: "cancelled", label: "Cancelled" },
+                { id: "all", label: tr("All history"), count: source.length },
+                { id: "paid", label: tr("Settled") },
+                { id: "completed", label: tr("Completed") },
+                { id: "refunded", label: tr("Refunded") },
+                { id: "cancelled", label: tr("Cancelled") },
               ]
             : [
-                { id: "active", label: "Open", count: active.length },
-                { id: "all", label: "All orders" },
-                { id: "unpaid", label: "Unpaid" },
-                { id: "completed", label: "Completed" },
-                { id: "cancelled", label: "Cancelled" },
+                { id: "active", label: tr("Open"), count: active.length },
+                { id: "all", label: tr("All orders") },
+                { id: "unpaid", label: tr("Unpaid") },
+                { id: "completed", label: tr("Completed") },
+                { id: "cancelled", label: tr("Cancelled") },
               ]
           ).map((f) => (
             <button
@@ -264,8 +265,8 @@ export function Orders({
           <div className="search-input compact">
             <Search size={14} />
             <input
-              placeholder="Search orders..."
-              aria-label="Search orders"
+              placeholder={tr("Search orders...")}
+              aria-label={tr("Search orders")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -273,7 +274,7 @@ export function Orders({
           <button
             className="icon-button"
             onClick={() => setView(view === "cards" ? "list" : "cards")}
-            aria-label="Toggle order view"
+            aria-label={tr("Toggle order view")}
           >
             {view === "cards" ? (
               <FileText size={15} />
@@ -289,10 +290,10 @@ export function Orders({
           style={{ justifyContent: "flex-start", gap: 12, flexWrap: "wrap" }}
         >
           <label className="field" style={{ minWidth: 150, flex: "0 1 190px" }}>
-            <span>From date</span>
+            <span>{tr("From date")}</span>
             <input
               className="input"
-              aria-label="Sales history from date"
+              aria-label={tr("Sales history from date")}
               type="date"
               value={fromDate}
               max={toDate || undefined}
@@ -300,10 +301,10 @@ export function Orders({
             />
           </label>
           <label className="field" style={{ minWidth: 150, flex: "0 1 190px" }}>
-            <span>To date</span>
+            <span>{tr("To date")}</span>
             <input
               className="input"
-              aria-label="Sales history to date"
+              aria-label={tr("Sales history to date")}
               type="date"
               value={toDate}
               min={fromDate || undefined}
@@ -317,9 +318,7 @@ export function Orders({
                 setFromDate("");
                 setToDate("");
               }}
-            >
-              Clear dates
-            </button>
+            >{tr("Clear dates")}</button>
           )}
         </div>
       )}
@@ -328,13 +327,13 @@ export function Orders({
           <EmptyState
             title={
               historyView
-                ? "No bills match these filters"
-                : "Nothing on this ticket rail"
+                ? tr("No bills match these filters")
+                : tr("Nothing on this ticket rail")
             }
             description={
               historyView
-                ? "Try another date range or search. Bills with payments, completed bills and cancellations appear here."
-                : "New orders will appear here. Try another filter to see past service."
+                ? tr("Try another date range or search. Bills with payments, completed bills and cancellations appear here.")
+                : tr("New orders will appear here. Try another filter to see past service.")
             }
           />
         </div>
@@ -343,12 +342,12 @@ export function Orders({
           <table className="data-table">
             <thead>
               <tr>
-                <th>Order</th>
-                <th>Service</th>
-                <th>Created</th>
-                <th>Status</th>
-                <th>Payment</th>
-                <th className="text-right">Total</th>
+                <th>{tr("Order")}</th>
+                <th>{tr("Service")}</th>
+                <th>{tr("Created")}</th>
+                <th>{tr("Status")}</th>
+                <th>{tr("Payment")}</th>
+                <th className="text-right">{tr("Total")}</th>
                 <th />
               </tr>
             </thead>
@@ -360,7 +359,7 @@ export function Orders({
                   </td>
                   <td>
                     {o.type === "dine-in"
-                      ? data.tables.find((t) => t.id === o.tableId)?.name || "Counter sale"
+                      ? data.tables.find((t) => t.id === o.tableId)?.name || tr("Counter sale")
                       : o.type}
                   </td>
                   <td>{dateTime(o.createdAt)}</td>
@@ -375,7 +374,7 @@ export function Orders({
                     <button
                       className="icon-button"
                       onClick={() => onReceipt(o.id)}
-                      title="View receipt"
+                      title={tr("View receipt")}
                     >
                       <ChevronRight size={15} />
                     </button>
@@ -400,10 +399,10 @@ export function Orders({
                     <span>
                       {o.type === "dine-in"
                         ? data.tables.find((t) => t.id === o.tableId)?.name ||
-                          "Counter sale"
+                          tr("Counter sale")
                         : o.type === "takeaway"
-                          ? "Counter sale"
-                          : "Delivery"}{" "}
+                          ? tr("Counter sale")
+                          : tr("Delivery")}{" "}
                       <i>·</i> {time(o.createdAt)}
                     </span>
                   </div>
@@ -416,8 +415,7 @@ export function Orders({
                       <span>
                         {l.name}
                         {(l.discount || 0) > 0 && (
-                          <small style={{ display: "block" }}>
-                            Item discount − {money(l.discount || 0)}
+                          <small style={{ display: "block" }}>{tr("Item discount −")} {money(l.discount || 0)}
                           </small>
                         )}
                       </span>
@@ -425,12 +423,12 @@ export function Orders({
                     </div>
                   ))}
                   {o.lines.length > 3 && (
-                    <small>+ {o.lines.length - 3} more items</small>
+                    <small>+ {o.lines.length - 3} {tr("more items")}</small>
                   )}
                 </div>
                 <div className="order-card-total">
                   <span>
-                    {o.lines.reduce((s, l) => s + l.quantity, 0)} items <i>·</i>{" "}
+                    {o.lines.reduce((s, l) => s + l.quantity, 0)} {tr("items")} <i>·</i>{" "}
                     <StatusBadge status={o.paymentStatus} />
                   </span>
                   <strong>{money(o.total)}</strong>
@@ -440,8 +438,7 @@ export function Orders({
                     <button
                       className="button button-ghost button-small"
                       onClick={() => onOpen(o.id)}
-                    >
-                      Open order <ArrowRight size={12} />
+                    >{tr("Open order")} <ArrowRight size={12} />
                     </button>
                   )}
                   {canPay &&
@@ -450,14 +447,12 @@ export function Orders({
                       <button
                         className="button button-primary button-small"
                         onClick={() => setPaymentId(o.id)}
-                      >
-                        Take payment
-                      </button>
+                      >{tr("Take payment")}</button>
                     )}
                   <button
                     className="icon-button"
                     onClick={() => onReceipt(o.id)}
-                    aria-label={`Receipt for ${o.number}`}
+                    aria-label={tr("Receipt for {0}", o.number)}
                   >
                     <Printer size={14} />
                   </button>
@@ -465,9 +460,7 @@ export function Orders({
                     <button
                       className="button button-ghost button-small"
                       onClick={() => setRefundOrder(o)}
-                    >
-                      Refund
-                    </button>
+                    >{tr("Refund")}</button>
                   )}
                   {canRefund &&
                     o.paid === 0 &&
@@ -475,7 +468,7 @@ export function Orders({
                       <button
                         className="icon-button"
                         onClick={() => setCancelOrder(o)}
-                        aria-label={`Cancel ${o.number}`}
+                        aria-label={tr("Cancel {0}", o.number)}
                       >
                         <XCircle size={14} />
                       </button>
@@ -504,8 +497,8 @@ export function Orders({
       )}{" "}
       {cancelOrder && (
         <ReasonDialog
-          title={`Cancel ${cancelOrder.number}`}
-          description="Prepared food is not automatically returned to sellable stock. Record the reason for the audit trail."
+          title={tr("Cancel {0}", cancelOrder.number)}
+          description={tr("Prepared food is not automatically returned to sellable stock. Record the reason for the audit trail.")}
           busy={busy}
           onClose={() => setCancelOrder(null)}
           onSubmit={(reason) => void cancel(reason)}
@@ -530,6 +523,7 @@ function ReasonDialog({
   onClose: () => void;
   onSubmit: (reason: string) => void;
 }) {
+  const tr = useTranslation();
   const [reason, setReason] = useState("");
   return (
     <Modal title={title} subtitle={description} onClose={onClose}>
@@ -540,7 +534,7 @@ function ReasonDialog({
         }}
       >
         <label className="field">
-          <span>Reason</span>
+          <span>{tr("Reason")}</span>
           <textarea
             required
             minLength={3}
@@ -554,11 +548,9 @@ function ReasonDialog({
             type="button"
             className="button button-ghost"
             onClick={onClose}
-          >
-            Keep order
-          </button>
+          >{tr("Keep order")}</button>
           <button className="button button-danger" disabled={busy}>
-            {busy ? "Saving..." : "Confirm cancellation"}
+            {busy ? tr("Saving...") : tr("Confirm cancellation")}
           </button>
         </div>
       </form>
@@ -572,6 +564,7 @@ function RefundDialog({
   order: Order;
   onClose: () => void;
 }) {
+  const tr = useTranslation();
   const { mutate, notify } = usePOS();
   const [amount, setAmount] = useState(
     ((order.paid - order.refunded) / 100).toString(),
@@ -581,8 +574,8 @@ function RefundDialog({
   const [id] = useState(commandId);
   return (
     <Modal
-      title="Record a refund"
-      subtitle={`${order.number} · available ${money(order.paid - order.refunded)}`}
+      title={tr("Record a refund")}
+      subtitle={tr("{0} · available {1}", order.number, money(order.paid - order.refunded))}
       onClose={onClose}
     >
       <form
@@ -597,7 +590,7 @@ function RefundDialog({
               reason,
             });
             notify(
-              "Refund recorded. Check the original payment channel for settlement.",
+              tr("Refund recorded. Check the original payment channel for settlement."),
             );
             onClose();
           } catch (err) {
@@ -613,7 +606,7 @@ function RefundDialog({
         </div>
         <div className="form-grid">
           <label className="field full-width">
-            <span>Refund amount (LKR)</span>
+            <span>{tr("Refund amount (LKR)")}</span>
             <input
               className="input"
               type="number"
@@ -626,14 +619,14 @@ function RefundDialog({
             />
           </label>
           <label className="field full-width">
-            <span>Reason</span>
+            <span>{tr("Reason")}</span>
             <textarea
               required
               minLength={3}
               maxLength={300}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Why is this payment being refunded?"
+              placeholder={tr("Why is this payment being refunded?")}
             />
           </label>
         </div>
@@ -642,11 +635,9 @@ function RefundDialog({
             className="button button-ghost"
             type="button"
             onClick={onClose}
-          >
-            Cancel
-          </button>
+          >{tr("Cancel")}</button>
           <button className="button button-danger" disabled={busy}>
-            {busy ? "Recording..." : "Record refund"}
+            {busy ? tr("Recording...") : tr("Record refund")}
           </button>
         </div>
       </form>
@@ -655,6 +646,7 @@ function RefundDialog({
 }
 
 export function Kitchen() {
+  const tr = useTranslation();
   const { data, mutate, notify } = usePOS();
   const [busy, setBusy] = useState<string | null>(null);
   const [type, setType] = useState("all");
@@ -680,7 +672,7 @@ export function Kitchen() {
         "PATCH",
       );
       notify(
-        `${order.number} is ${status === "preparing" ? "being prepared" : status === "ready" ? "ready to serve" : "served"}.`,
+        tr("{0} is {1}.", order.number, status === "preparing" ? "being prepared" : status === "ready" ? "ready to serve" : "served"),
       );
     } catch (err) {
       notify((err as Error).message, "error");
@@ -693,10 +685,8 @@ export function Kitchen() {
       <div className="page-heading">
         <div>
           <div className="eyebrow">
-            <span className="status-dot" /> LIVE KITCHEN
-          </div>
-          <h1>
-            On the pass<span className="heading-period">.</span>
+            <span className="status-dot" /> {tr("LIVE KITCHEN")}</div>
+          <h1>{tr("On the pass")}<span className="heading-period">.</span>
           </h1>
           <p className="page-subtitle">
             A clear view of what’s cooking, and what’s next.
@@ -705,7 +695,7 @@ export function Kitchen() {
         <div className="kitchen-clock">
           <Clock3 size={15} />
           {time(new Date(now).toISOString())}
-          <span>Auto-refresh on</span>
+          <span>{tr("Auto-refresh on")}</span>
         </div>
       </div>
       <div className="operations-toolbar">
@@ -726,15 +716,14 @@ export function Kitchen() {
           ))}
         </div>
         <span className="muted" style={{ fontSize: 10 }}>
-          {orders.length} active tickets
-        </span>
+          {orders.length} {tr("active tickets")}</span>
       </div>
       <div className="kitchen-board">
         {(
           [
             {
               status: "new",
-              label: "New tickets",
+              label: tr("New tickets"),
               subtitle: "Ready to get started",
               next: "preparing",
               action: "Start preparing",
@@ -742,7 +731,7 @@ export function Kitchen() {
             },
             {
               status: "preparing",
-              label: "Preparing",
+              label: tr("Preparing"),
               subtitle: "A little care in every dish",
               next: "ready",
               action: "Mark ready",
@@ -750,7 +739,7 @@ export function Kitchen() {
             },
             {
               status: "ready",
-              label: "Ready for pickup",
+              label: tr("Ready for pickup"),
               subtitle: "From the pass to the guest",
               next: "served",
               action: "Mark served",
@@ -792,7 +781,7 @@ export function Kitchen() {
                             <Icon size={12} />
                             {o.type === "dine-in"
                               ? data.tables.find((t) => t.id === o.tableId)
-                                  ?.name || "Counter sale"
+                                  ?.name || tr("Counter sale")
                               : o.type}
                           </span>
                         </div>
@@ -822,10 +811,9 @@ export function Kitchen() {
                         </div>
                       )}
                       <div className="ticket-bottom">
-                        <span>Received {time(o.createdAt)}</span>
+                        <span>{tr("Received")} {time(o.createdAt)}</span>
                         <span>
-                          {o.lines.reduce((s, l) => s + l.quantity, 0)} items
-                        </span>
+                          {o.lines.reduce((s, l) => s + l.quantity, 0)} {tr("items")}</span>
                       </div>
                       <button
                         className={`button kitchen-action ${column.status === "ready" ? "button-primary" : ""}`}
@@ -835,7 +823,7 @@ export function Kitchen() {
                         onClick={() => void progress(o, column.next)}
                       >
                         <column.icon size={14} />
-                        {busy === o.id ? "Updating..." : column.action}
+                        {busy === o.id ? tr("Updating...") : column.action}
                         <ArrowRight size={14} />
                       </button>
                     </article>
@@ -846,8 +834,8 @@ export function Kitchen() {
                     <Check size={22} />
                     <span>
                       {column.status === "new"
-                        ? "All caught up."
-                        : "No tickets here yet."}
+                        ? tr("All caught up.")
+                        : tr("No tickets here yet.")}
                     </span>
                   </div>
                 )}
@@ -867,6 +855,7 @@ export function Tables({
   onOpen: (id: string) => void;
   onNew: (tableId: string) => void;
 }) {
+  const tr = useTranslation();
   const { data } = usePOS();
   const [area, setArea] = useState("all");
   const areas = [...new Set(data.tables.map((t) => t.area))];
@@ -875,24 +864,17 @@ export function Tables({
     <>
       <div className="page-heading">
         <div>
-          <div className="eyebrow">A SEAT FOR EVERY GUEST</div>
-          <h1>
-            The floor<span className="heading-period">.</span>
+          <div className="eyebrow">{tr("A SEAT FOR EVERY GUEST")}</div>
+          <h1>{tr("The floor")}<span className="heading-period">.</span>
           </h1>
           <p className="page-subtitle">
-            {data.tables.length - occupied} tables available · {occupied} in
-            service
-          </p>
+            {data.tables.length - occupied} {tr("tables available ·")} {occupied} {tr("in service")}</p>
         </div>
         <div className="table-legend">
           <span>
-            <i />
-            Available
-          </span>
+            <i />{tr("Available")}</span>
           <span>
-            <i />
-            Occupied
-          </span>
+            <i />{tr("Occupied")}</span>
         </div>
       </div>
       <div className="operations-toolbar">
@@ -900,9 +882,7 @@ export function Tables({
           <button
             className={area === "all" ? "active" : ""}
             onClick={() => setArea("all")}
-          >
-            All areas
-          </button>
+          >{tr("All areas")}</button>
           {areas.map((a) => (
             <button
               key={a}
@@ -918,8 +898,7 @@ export function Tables({
             size={12}
             style={{ verticalAlign: "middle", marginRight: 6 }}
           />
-          {data.tables.reduce((s, t) => s + t.seats, 0)} total seats
-        </span>
+          {data.tables.reduce((s, t) => s + t.seats, 0)} {tr("total seats")}</span>
       </div>
       <div className="tables-grid">
         {data.tables
@@ -958,18 +937,18 @@ export function Tables({
                   </div>
                 </div>
                 <h3>{table.name}</h3>
-                <span className="table-seats">{table.seats} seats</span>
+                <span className="table-seats">{table.seats} {tr("seats")}</span>
                 <div className="floor-table-bottom">
                   {order ? (
                     <>
                       <strong>{money(order.total)}</strong>
                       <span>
-                        {elapsed(order.createdAt)} min <ArrowRight size={12} />
+                        {elapsed(order.createdAt)} {tr("min")} <ArrowRight size={12} />
                       </span>
                     </>
                   ) : (
                     <>
-                      <span>Ready for guests</span>
+                      <span>{tr("Ready for guests")}</span>
                       <Plus size={14} />
                     </>
                   )}
@@ -995,6 +974,7 @@ export function Receipt({
   settings: Settings;
   onClose: () => void;
 }) {
+  const tr = useTranslation();
   useDevicePreferences();
   const {notify}=usePOS();
   const [printing,setPrinting]=useState(false);
@@ -1038,37 +1018,36 @@ export function Receipt({
       </p>
       <div className="receipt-meta">
         <div>
-          <span>Receipt</span>
+          <span>{tr("Receipt")}</span>
           <strong>{order.number}</strong>
         </div>
         <div>
-          <span>Date</span>
+          <span>{tr("Date")}</span>
           <span>{dateTime(order.createdAt)}</span>
         </div>
         <div>
-          <span>Service</span>
-          <span>{order.priceMode==='wholesale'?'Wholesale':'Retail'} / {order.type === "takeaway" ? "Counter sale" : "Delivery"}</span>
+          <span>{tr("Service")}</span>
+          <span>{order.priceMode==='wholesale'?tr("Wholesale"):tr("Retail")} / {order.type === "takeaway" ? tr("Counter sale") : tr("Delivery")}</span>
         </div>
         <div>
-          <span>Payment</span>
+          <span>{tr("Payment")}</span>
           <span>{order.paymentStatus.toUpperCase()}</span>
         </div>
       </div>
       <table>
         <thead>
           <tr>
-            <th>Item</th>
-            <th>Amount</th>
+            <th>{tr("Item")}</th>
+            <th>{tr("Amount")}</th>
           </tr>
         </thead>
         <tbody>
           {order.lines.map((l) => (
             <tr key={l.id}>
               <td>
-                {l.quantity} {l.saleUnit || "pcs"} × {l.name}
+                {l.quantity} {l.saleUnit || tr("pcs")} × {l.name}
                 {(l.discount || 0) > 0 && (
-                  <small style={{ display: "block", fontSize: ".85em" }}>
-                    Item discount − {money(l.discount || 0)}
+                  <small style={{ display: "block", fontSize: ".85em" }}>{tr("Item discount −")} {money(l.discount || 0)}
                   </small>
                 )}
               </td>
@@ -1079,12 +1058,12 @@ export function Receipt({
       </table>
       <div className="receipt-totals">
         <div>
-          <span>Subtotal</span>
+          <span>{tr("Subtotal")}</span>
           <span>{money(order.subtotal)}</span>
         </div>
         {itemDiscount > 0 && (
           <div>
-            <span>Item discounts</span>
+            <span>{tr("Item discounts")}</span>
             <span>− {money(itemDiscount)}</span>
           </div>
         )}
@@ -1092,31 +1071,31 @@ export function Receipt({
           <div>
             <span>
               {hasItemDiscountMetadata || order.cartDiscount !== undefined
-                ? "Cart discount"
-                : "Discount"}
+                ? tr("Cart discount")
+                : tr("Discount")}
             </span>
             <span>− {money(cartDiscount)}</span>
           </div>
         )}
         <div>
-          <span>Service charge</span>
+          <span>{tr("Service charge")}</span>
           <span>{money(order.serviceCharge)}</span>
         </div>
         <div>
-          <span>Tax</span>
+          <span>{tr("Tax")}</span>
           <span>{money(order.tax)}</span>
         </div>
         <div className="total">
-          <strong>Total</strong>
+          <strong>{tr("Total")}</strong>
           <strong>{money(order.total)}</strong>
         </div>
         <div>
-          <span>Paid</span>
+          <span>{tr("Paid")}</span>
           <span>{money(order.paid)}</span>
         </div>
         {order.refunded > 0 && (
           <div>
-            <span>Refunded</span>
+            <span>{tr("Refunded")}</span>
             <span>{money(order.refunded)}</span>
           </div>
         )}
@@ -1124,21 +1103,21 @@ export function Receipt({
           <div key={p.id}>
             <span>
               {p.method.toUpperCase()}
-              {p.change > 0 ? " · change" : ""}
+              {p.change > 0 ? tr("· change") : ""}
             </span>
             <span>{money(p.change > 0 ? p.change : p.amount)}</span>
           </div>
         ))}
       </div>
       <p className="receipt-thanks">
-        {settings.receiptFooter || "Thank you for dining with us."}
+        {settings.receiptFooter || tr("Thank you for dining with us.")}
       </p>
-      <p className="receipt-copy">COPY · Retain for your records</p>
+      <p className="receipt-copy">{tr("COPY · Retain for your records")}</p>
     </>
   );
   return (
     <>
-      <Modal title="Order receipt" subtitle={order.number} onClose={onClose}>
+      <Modal title={tr("Order receipt")} subtitle={order.number} onClose={onClose}>
         <div
           className="receipt-preview"
           style={
@@ -1151,20 +1130,17 @@ export function Receipt({
           {content}
         </div>
         <p className="preference-note" style={{ textAlign: "center" }}>
-          {dimensions.paper} mm paper · {dimensions.content} mm content ·{" "}
+          {dimensions.paper} {tr("mm paper ·")} {dimensions.content} {tr("mm content ·")}{" "}
           {dimensions.offset} mm offset. Match the printer dialog's paper size
           to this layout.
         </p>
         <div className="form-actions">
-          <button className="button button-ghost" onClick={onClose}>
-            Close
-          </button>
+          <button className="button button-ghost" onClick={onClose}>{tr("Close")}</button>
           <button
             className="button button-primary"
             disabled={printing} onClick={()=>void printReceipt()}
           >
-            <Printer size={14} /> Print receipt
-          </button>
+            <Printer size={14} /> {tr("Print receipt")}</button>
         </div>
       </Modal>
       <style>

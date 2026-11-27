@@ -17,6 +17,7 @@ export interface CatalogPhoto {
   image: string;
   localMarket?: boolean;
   credit?: CatalogPhotoCredit;
+  retailer?: {productUrl: string};
 }
 
 export const photoBarcode = (value: string) => /^\d{8,14}$/.test(value.trim()) ? value.trim() : '';
@@ -54,13 +55,23 @@ export function matchingCatalogPhotos(photos: CatalogPhoto[], query: string, bar
 export function catalogImageUrl(image: string, catalog: CatalogPhotoCredit['catalog']) {
   try {
     const url = new URL(image);
-    return url.protocol === 'https:' && url.hostname === photoCatalogs[catalog].images &&
-      !url.port && !url.username && !url.password && !url.search && !url.hash &&
+    return url.protocol === 'https:' && url.hostname === photoCatalogs[catalog]?.images && !url.port && !url.username && !url.password && !url.search && !url.hash &&
       /^\/images\/products\/(?:\d+\/)+front_[a-z-]+\.\d+\.(?:400|full)\.jpg$/i.test(url.pathname) ? url.href : null;
   } catch { return null; }
 }
 
-export function googlePhotoSearchUrl(name: string) {
-  const query = photoQuery(name);
-  return "https://www.google.com/search?tbm=isch&q=" + encodeURIComponent(query + " product package Sri Lanka");
+export function hemasPhotoUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.origin === 'https://hemasestore.com' && !url.username && !url.password && !url.search && !url.hash &&
+      /^\/wp-content\/uploads\/\d{4}\/\d{2}\/[\w.%()-]+\.(?:jpe?g|png|webp)$/i.test(url.pathname) ? url.href : null;
+  } catch { return null; }
+}
+
+export function isOnlineCatalogPhoto(photo: CatalogPhoto) {
+  return Boolean((photo.credit && catalogImageUrl(photo.image, photo.credit.catalog)) || (photo.retailer && hemasPhotoUrl(photo.image)));
+}
+
+export function relatedPhotoQuery(value: string) {
+  return photoQuery(value).replace(/\b(mini|small)\b/g, '').trim();
 }

@@ -1,3 +1,4 @@
+import {useLanguage, useTranslation} from "../lib/language";
 import ProductPhoto from '../components/ProductPhoto';
 import PhotoPicker, {type PhotoPickerHandle} from '../components/PhotoPicker';
 import ProfitSummary from '../components/ProfitSummary';
@@ -102,6 +103,7 @@ function Modal({
   children: ReactNode;
   close: () => unknown;
 }) {
+  const tr = useTranslation();
   const closeRef = useRef(close);
   closeRef.current = close;
   useBackLayer(true, () => closeRef.current(), `management:${title}`);
@@ -159,7 +161,7 @@ function Modal({
           <button
             type="button"
             className="icon-button"
-            aria-label="Close"
+            aria-label={tr("Close")}
             onClick={close}
           >
             <X size={20} />
@@ -241,6 +243,7 @@ function SearchField({
   onChange: (value: string) => void;
   placeholder: string;
 }) {
+  const tr = useTranslation();
   return (
     <div className="management-search">
       <Search size={16} />
@@ -254,7 +257,7 @@ function SearchField({
         <button
           className="icon-button"
           onClick={() => onChange("")}
-          aria-label="Clear search"
+          aria-label={tr("Clear search")}
         >
           <X size={14} />
         </button>
@@ -281,7 +284,9 @@ function downloadCSV(filename: string, rows: (string | number)[][]) {
   URL.revokeObjectURL(link.href);
 }
 export default function Management({ page }: { page: Page }) {
+  const tr = useTranslation();
   const { data, branchId, locale, mutate, notify, refresh } = usePOS();
+  const {setLocale} = useLanguage();
   const [search, setSearch] = useState("");
   const [catalogSearch, setCatalogSearch] = useState("");
   const [range, setRange] = useState<Range>("today");
@@ -427,7 +432,7 @@ export default function Management({ page }: { page: Page }) {
       setError(
         cause instanceof Error
           ? cause.message
-          : "Unable to save. Please try again.",
+          : tr("Unable to save. Please try again."),
       );
     } finally {
       setBusy(false);
@@ -441,7 +446,7 @@ export default function Management({ page }: { page: Page }) {
       await refresh();
       notify(success);
     } catch (cause) {
-      notify(cause instanceof Error ? cause.message : "Action failed", "error");
+      notify(cause instanceof Error ? cause.message : tr("Action failed"), "error");
     } finally {
       setBusy(false);
     }
@@ -458,10 +463,10 @@ export default function Management({ page }: { page: Page }) {
           onClick={close}
           disabled={busy}
         >
-          {"Cancel"}
+          {tr("Cancel")}
         </button>
         <button type="submit" className="button button-primary" disabled={busy || menuPhotoBusy}>
-          {busy ? "Saving…" : text}
+          {busy ? tr("Saving…") : text}
           <Check size={16} />
         </button>
       </div>
@@ -471,14 +476,14 @@ export default function Management({ page }: { page: Page }) {
     <div className="management-date">
       <CalendarDays size={15} />
       <select
-        aria-label={"Date range"}
+        aria-label={tr("Date range")}
         value={range}
         onChange={(event) => setRange(event.target.value as Range)}
       >
-        <option value="today">{"Today"}</option>
-        <option value="week">{"Last 7 days"}</option>
-        <option value="month">{"Last 30 days"}</option>
-        <option value="all">{"All time"}</option>
+        <option value="today">{tr("Today")}</option>
+        <option value="week">{tr("Last 7 days")}</option>
+        <option value="month">{tr("Last 30 days")}</option>
+        <option value="all">{tr("All time")}</option>
       </select>
       <ChevronDown size={14} />
     </div>
@@ -536,8 +541,7 @@ export default function Management({ page }: { page: Page }) {
         <div className="management-eyebrow">
           <span className="live-dot" />
           {label(branch)}
-          <span className="eyebrow-separator">/</span>WORKSPACE
-        </div>
+          <span className="eyebrow-separator">/</span>{tr("WORKSPACE")}</div>
         <h1>{heading[0]}</h1>
         <p>{heading[2]}</p>
       </div>
@@ -553,9 +557,7 @@ export default function Management({ page }: { page: Page }) {
               open("inventory-create");
             }}
           >
-            <Plus size={16} />
-            Add item
-          </button>
+            <Plus size={16} />{tr("Add item")}</button>
         )}
         {page === "inventory" && (
           <button
@@ -566,7 +568,7 @@ export default function Management({ page }: { page: Page }) {
             }}
           >
             <Plus size={16} />
-            {"Adjust stock"}
+            {tr("Adjust stock")}
           </button>
         )}
         {page === "production" && (
@@ -579,7 +581,7 @@ export default function Management({ page }: { page: Page }) {
             }}
           >
             <Plus size={16} />
-            {"New batch"}
+            {tr("New batch")}
           </button>
         )}
         {page === "purchases" && (
@@ -587,9 +589,7 @@ export default function Management({ page }: { page: Page }) {
             className="button button-ghost"
             onClick={() => open("supplier")}
           >
-            <Plus size={16} />
-            Add supplier
-          </button>
+            <Plus size={16} />{tr("Add supplier")}</button>
         )}
         {page === "purchases" && (
           <button
@@ -600,7 +600,7 @@ export default function Management({ page }: { page: Page }) {
             }}
           >
             <Plus size={16} />
-            {"Add purchase"}
+            {tr("Add purchase")}
           </button>
         )}
         {page === "customers" && (
@@ -609,7 +609,7 @@ export default function Management({ page }: { page: Page }) {
             onClick={() => open("customer")}
           >
             <Plus size={16} />
-            {"Add customer"}
+            {tr("Add customer")}
           </button>
         )}
         {page === "team" && (
@@ -618,7 +618,7 @@ export default function Management({ page }: { page: Page }) {
             onClick={() => open("staff")}
           >
             <Plus size={16} />
-            {"Add member"}
+            {tr("Add member")}
           </button>
         )}
         {page === "finance" && (
@@ -626,9 +626,7 @@ export default function Management({ page }: { page: Page }) {
             className="button button-ghost"
             onClick={() => exportDayEnd()}
           >
-            <Download size={15} />
-            Day-end CSV
-          </button>
+            <Download size={15} />{tr("Day-end CSV")}</button>
         )}
         {page === "finance" && (
           <button
@@ -636,7 +634,7 @@ export default function Management({ page }: { page: Page }) {
             onClick={() => open("expense")}
           >
             <Plus size={16} />
-            {"Add expense"}
+            {tr("Add expense")}
           </button>
         )}
         {page === "reports" && (
@@ -667,11 +665,11 @@ export default function Management({ page }: { page: Page }) {
                   order.refunded / 100,
                 ]),
               ]);
-              notify("Sales report downloaded");
+              notify(tr("Sales report downloaded"));
             }}
           >
             <Download size={16} />
-            {"Export CSV"}
+            {tr("Export CSV")}
           </button>
         )}
       </div>
@@ -680,20 +678,20 @@ export default function Management({ page }: { page: Page }) {
   const stats = (
     <div className="management-stats">
       <Stat
-        label={"Total revenue"}
+        label={tr("Total revenue")}
         amount={money(revenue)}
         note={"From settled orders"}
         icon={<CircleDollarSign size={18} />}
         accent
       />
       <Stat
-        label={"Orders completed"}
+        label={tr("Orders completed")}
         amount={number(completed.length)}
         note={`${periodOrders.filter((order) => order.paymentStatus !== "paid").length} ${"orders in progress"}`}
         icon={<ShoppingBag size={18} />}
       />
       <Stat
-        label={"Average order"}
+        label={tr("Average order")}
         amount={money(
           completed.length ? Math.round(revenue / completed.length) : 0,
         )}
@@ -701,7 +699,7 @@ export default function Management({ page }: { page: Page }) {
         icon={<ReceiptText size={18} />}
       />
       <Stat
-        label={"Cash at checkout"}
+        label={tr("Cash at checkout")}
         amount={money(cashSales)}
         note={`${"Card"} · ${money(cardSales)}`}
         icon={<Wallet size={18} />}
@@ -803,7 +801,7 @@ export default function Management({ page }: { page: Page }) {
           <svg
             viewBox={`0 0 ${width} ${height}`}
             role="img"
-            aria-label={"Sales over time"}
+            aria-label={tr("Sales over time")}
             preserveAspectRatio="none"
           >
             <defs>
@@ -860,10 +858,10 @@ export default function Management({ page }: { page: Page }) {
     );
   })();
   const methods = [
-    { key: "cash", label: "Cash", color: "#b7f67a" },
-    { key: "card", label: "Card", color: "#99bafc" },
+    { key: "cash", label: tr("Cash"), color: "#b7f67a" },
+    { key: "card", label: tr("Card"), color: "#99bafc" },
     { key: "qr", label: "QR", color: "#cab0f5" },
-    { key: "credit", label: "Customer Loan", color: "#ff9e9a" },
+    { key: "credit", label: tr("Customer Loan"), color: "#ff9e9a" },
   ].map((method) => ({
     ...method,
     amount: completed.reduce(
@@ -881,13 +879,13 @@ export default function Management({ page }: { page: Page }) {
     <section className="panel management-payment">
       <div className="management-card-heading">
         <div>
-          <h2>{"Payment breakdown"}</h2>
-          <p>{"Checkout payments and amounts placed on account"}</p>
+          <h2>{tr("Payment breakdown")}</h2>
+          <p>{tr("Checkout payments and amounts placed on account")}</p>
         </div>
         <CreditCard size={18} />
       </div>
       <div className="payment-donut">
-        <svg viewBox="0 0 160 160" role="img" aria-label={"Payments by method"}>
+        <svg viewBox="0 0 160 160" role="img" aria-label={tr("Payments by method")}>
           <circle
             cx="80"
             cy="80"
@@ -917,7 +915,7 @@ export default function Management({ page }: { page: Page }) {
           })}
         </svg>
         <div>
-          <span>{"Payments & loans"}</span>
+          <span>{tr("Payments & loans")}</span>
           <strong>{money(paymentTotal)}</strong>
         </div>
       </div>
@@ -976,27 +974,22 @@ export default function Management({ page }: { page: Page }) {
     <section className="panel management-table-panel menu-catalog">
       <div className="management-table-toolbar">
         <div>
-          <h2>
-            Menu & recipes<span className="count-pill">{data.menu.length}</span>
+          <h2>{tr("Menu & recipes")}<span className="count-pill">{data.menu.length}</span>
           </h2>
-          <p className="catalog-intro">
-            Your menu, pricing and ingredient quantities per portion.
-          </p>
+          <p className="catalog-intro">{tr("Your menu, pricing and ingredient quantities per portion.")}</p>
         </div>
         <div className="catalog-actions">
           <SearchField
             value={catalogSearch}
             onChange={setCatalogSearch}
-            placeholder="Find a menu item…"
+            placeholder={tr("Find a menu item…")}
           />
           {data.user.role === "owner" && (
             <button
               className="button button-primary button-small"
               onClick={() => startMenu(null)}
             >
-              <Plus size={14} />
-              Add dish
-            </button>
+              <Plus size={14} />{tr("Add dish")}</button>
           )}
         </div>
       </div>
@@ -1004,12 +997,12 @@ export default function Management({ page }: { page: Page }) {
         <table className="data-table">
           <thead>
             <tr>
-              <th>Menu item</th>
-              <th>Category</th>
-              <th>Selling price</th>
-              <th>Cost per portion</th>
-              <th>Stock tracking</th>
-              <th>Recipe</th>
+              <th>{tr("Menu item")}</th>
+              <th>{tr("Category")}</th>
+              <th>{tr("Selling price")}</th>
+              <th>{tr("Cost per portion")}</th>
+              <th>{tr("Stock tracking")}</th>
+              <th>{tr("Recipe")}</th>
               <th />
             </tr>
           </thead>
@@ -1035,7 +1028,7 @@ export default function Management({ page }: { page: Page }) {
                         </div>
                         <div>
                           <strong>{item.name}</strong>
-                          <small>{item.preparationMinutes} MIN PREP</small>
+                          <small>{item.preparationMinutes} {tr("MIN PREP")}</small>
                         </div>
                       </div>
                     </td>
@@ -1053,15 +1046,15 @@ export default function Management({ page }: { page: Page }) {
                         tone={item.stockMode === "untracked" ? "" : "green"}
                       >
                         {item.stockMode === "prepared"
-                          ? "Prepared portions"
+                          ? tr("Prepared portions")
                           : item.stockMode === "recipe"
-                            ? "Recipe ingredients"
-                            : "Untracked"}
+                            ? tr("Recipe ingredients")
+                            : tr("Untracked")}
                       </Pill>
                     </td>
                     <td>
                       {item.stockMode === "untracked" ? (
-                        <span className="muted">Not required</span>
+                        <span className="muted">{tr("Not required")}</span>
                       ) : data.user.role === "owner" ? (
                         <button
                           className="button button-ghost button-small"
@@ -1069,14 +1062,14 @@ export default function Management({ page }: { page: Page }) {
                         >
                           <BookOpen size={13} />
                           {recipe
-                            ? `${recipe.ingredients.length} ingredients`
-                            : "Set up recipe"}
+                            ? tr("{0} ingredients", recipe.ingredients.length)
+                            : tr("Set up recipe")}
                         </button>
                       ) : (
                         <span className="muted">
                           {recipe
-                            ? `${recipe.ingredients.length} ingredients`
-                            : "Not configured"}
+                            ? tr("{0} ingredients", recipe.ingredients.length)
+                            : tr("Not configured")}
                         </span>
                       )}
                     </td>
@@ -1086,9 +1079,7 @@ export default function Management({ page }: { page: Page }) {
                           className="button button-ghost button-small"
                           onClick={() => startMenu(item)}
                         >
-                          <SlidersHorizontal size={13} />
-                          Edit
-                        </button>
+                          <SlidersHorizontal size={13} />{tr("Edit")}</button>
                       )}
                     </td>
                   </tr>
@@ -1098,14 +1089,14 @@ export default function Management({ page }: { page: Page }) {
         </table>
         {!data.menu.some((item) =>
           item.name.toLowerCase().includes(catalogSearch.toLowerCase()),
-        ) && <Empty title="No matching menu items" />}
+        ) && <Empty title={tr("No matching menu items")} />}
       </div>
       <div className="management-table-footer">
         <span>
           <BookOpen size={13} />
           Recipe quantities are per portion, in each ingredient’s stock unit.
         </span>
-        <span>Menu changes apply to all branches</span>
+        <span>{tr("Menu changes apply to all branches")}</span>
       </div>
     </section>
   );
@@ -1133,14 +1124,14 @@ export default function Management({ page }: { page: Page }) {
     <>
       <div className="management-stats three">
         <Stat
-          label="Registered customers"
+          label={tr("Registered customers")}
           amount={number(data.customers.length)}
           note="Your growing guest directory"
           icon={<Users size={18} />}
           accent
         />
         <Stat
-          label="Customer lifetime sales"
+          label={tr("Customer lifetime sales")}
           amount={money(
             data.customers.reduce((sum, customer) => sum + customer.spent, 0),
           )}
@@ -1148,7 +1139,7 @@ export default function Management({ page }: { page: Page }) {
           icon={<CircleDollarSign size={18} />}
         />
         <Stat
-          label="Outstanding dues"
+          label={tr("Outstanding dues")}
           amount={money(
             data.customers.reduce((sum, customer) => sum + Math.max(0, customer.balance), 0),
           )}
@@ -1158,25 +1149,23 @@ export default function Management({ page }: { page: Page }) {
       </div>
       <section className="panel management-table-panel">
         <div className="management-table-toolbar">
-          <h2>
-            Customers & dues
-            <span className="count-pill">{data.customers.length}</span>
+          <h2>{tr("Customers & dues")}<span className="count-pill">{data.customers.length}</span>
           </h2>
           <SearchField
             value={search}
             onChange={setSearch}
-            placeholder="Name, phone or email…"
+            placeholder={tr("Name, phone or email…")}
           />
         </div>
         <div className="table-scroll">
           <table className="data-table">
             <thead>
               <tr>
-                <th>Customer</th>
-                <th>Phone</th>
-                <th>Visits</th>
-                <th>Total spent</th>
-                <th>Branch dues</th>
+                <th>{tr("Customer")}</th>
+                <th>{tr("Phone")}</th>
+                <th>{tr("Visits")}</th>
+                <th>{tr("Total spent")}</th>
+                <th>{tr("Branch dues")}</th>
                 <th />
               </tr>
             </thead>
@@ -1195,7 +1184,7 @@ export default function Management({ page }: { page: Page }) {
                       </span>
                       <div>
                         <strong>{customer.name}</strong>
-                        <small>{customer.email || "Registered customer"}</small>
+                        <small>{customer.email || tr("Registered customer")}</small>
                       </div>
                     </div>
                   </td>
@@ -1206,7 +1195,7 @@ export default function Management({ page }: { page: Page }) {
                     <Pill tone={customer.balance > 0 ? "amber" : "green"}>
                       {customer.balance > 0
                         ? money(customer.balance)
-                        : "No dues"}
+                        : tr("No dues")}
                     </Pill>
                   </td>
                   <td>
@@ -1216,8 +1205,8 @@ export default function Management({ page }: { page: Page }) {
                     >
                       <BookOpen size={13} />
                       {customer.balance > 0
-                        ? "Ledger & collect"
-                        : "View ledger"}
+                        ? tr("Ledger & collect")
+                        : tr("View ledger")}
                     </button>
                   </td>
                 </tr>
@@ -1226,17 +1215,15 @@ export default function Management({ page }: { page: Page }) {
           </table>
           {!visibleCustomers.length && (
             <Empty
-              title="No customers found"
-              subtitle="Add a customer to start keeping a clear account of their purchases."
+              title={tr("No customers found")}
+              subtitle={tr("Add a customer to start keeping a clear account of their purchases.")}
             />
           )}
         </div>
         <div className="management-table-footer">
           <span>
-            <ShieldCheck size={13} />
-            Credit sales, refunds and collections keep the ledger up to date.
-          </span>
-          <span>Dues shown for the selected branch</span>
+            <ShieldCheck size={13} />{tr("Credit sales, refunds and collections keep the ledger up to date.")}</span>
+          <span>{tr("Dues shown for the selected branch")}</span>
         </div>
       </section>
     </>
@@ -1280,13 +1267,13 @@ export default function Management({ page }: { page: Page }) {
         shift.variance === null ? "" : shift.variance / 100,
       ]),
     ]);
-    notify("Day-end reconciliation downloaded");
+    notify(tr("Day-end reconciliation downloaded"));
   };
   const reportURL = (format: "csv" | "json") =>
     `/api/reports/income-expenses?${new URLSearchParams({ branchId, from: reportFrom, to: reportTo, format })}`;
   const downloadIncomeExpense = async () => {
     if (!reportFrom || !reportTo || reportFrom > reportTo) {
-      notify("Choose a valid start and end date.", "error");
+      notify(tr("Choose a valid start and end date."), "error");
       return;
     }
     setBusy(true);
@@ -1302,12 +1289,12 @@ export default function Management({ page }: { page: Page }) {
       link.download = `retail-pos-income-expenses-${reportFrom}-${reportTo}.csv`;
       link.click();
       URL.revokeObjectURL(url);
-      notify("Income & expense report downloaded");
+      notify(tr("Income & expense report downloaded"));
     } catch (cause) {
       notify(
         cause instanceof Error
           ? cause.message
-          : "Unable to download the report.",
+          : tr("Unable to download the report."),
         "error",
       );
     } finally {
@@ -1316,12 +1303,12 @@ export default function Management({ page }: { page: Page }) {
   };
   const printIncomeExpense = async () => {
     if (!reportFrom || !reportTo || reportFrom > reportTo) {
-      notify("Choose a valid start and end date.", "error");
+      notify(tr("Choose a valid start and end date."), "error");
       return;
     }
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
-      notify("Allow pop-ups to open the printable report.", "error");
+      notify(tr("Allow pop-ups to open the printable report."), "error");
       return;
     }
     printWindow.document.write(
@@ -1363,7 +1350,7 @@ export default function Management({ page }: { page: Page }) {
       notify(
         cause instanceof Error
           ? cause.message
-          : "Unable to prepare the report.",
+          : tr("Unable to prepare the report."),
         "error",
       );
     } finally {
@@ -1377,7 +1364,7 @@ export default function Management({ page }: { page: Page }) {
           <Download size={21} />
         </span>
         <div>
-          <h2>Income & expense statement</h2>
+          <h2>{tr("Income & expense statement")}</h2>
           <p>
             Download recorded cash flow, including customer collections and
             refunds.
@@ -1385,7 +1372,7 @@ export default function Management({ page }: { page: Page }) {
         </div>
       </div>
       <div className="financial-download-controls">
-        <Field label="From">
+        <Field label={tr("From")}>
           <input
             className="input"
             type="date"
@@ -1394,7 +1381,7 @@ export default function Management({ page }: { page: Page }) {
             onChange={(event) => setReportFrom(event.target.value)}
           />
         </Field>
-        <Field label="To">
+        <Field label={tr("To")}>
           <input
             className="input"
             type="date"
@@ -1408,17 +1395,13 @@ export default function Management({ page }: { page: Page }) {
           disabled={busy}
           onClick={printIncomeExpense}
         >
-          <ReceiptText size={15} />
-          Print / PDF
-        </button>
+          <ReceiptText size={15} />{tr("Print / PDF")}</button>
         <button
           className="button button-primary"
           disabled={busy}
           onClick={downloadIncomeExpense}
         >
-          <Download size={15} />
-          Download CSV
-        </button>
+          <Download size={15} />{tr("Download CSV")}</button>
       </div>
     </section>
   );
@@ -1438,17 +1421,17 @@ export default function Management({ page }: { page: Page }) {
             <section className="panel revenue-panel">
               <div className="management-card-heading">
                 <div>
-                  <h2>{"Revenue overview"}</h2>
-                  <p>{"Every good day starts with a clear picture."}</p>
+                  <h2>{tr("Revenue overview")}</h2>
+                  <p>{tr("Every good day starts with a clear picture.")}</p>
                 </div>
                 <span className="chart-series">
                   <i />
-                  {"Revenue"}
+                  {tr("Revenue")}
                 </span>
               </div>
               <div className="chart-total">
                 {money(revenue)}
-                <span>{"total sales"}</span>
+                <span>{tr("total sales")}</span>
               </div>
               {salesChart}
             </section>
@@ -1456,8 +1439,8 @@ export default function Management({ page }: { page: Page }) {
             <section className="panel popular-panel">
               <div className="management-card-heading">
                 <div>
-                  <h2>{"Guest favourites"}</h2>
-                  <p>{"The products your customers buy most"}</p>
+                  <h2>{tr("Guest favourites")}</h2>
+                  <p>{tr("The products your customers buy most")}</p>
                 </div>
                 <Flame size={19} />
               </div>
@@ -1478,7 +1461,7 @@ export default function Management({ page }: { page: Page }) {
                       <div className="top-item-name">
                         <strong>{label(item)}</strong>
                         <span>
-                          {number(item.count)} {"units sold"}
+                          {number(item.count)} {tr("units sold")}
                         </span>
                       </div>
                       <div className="top-item-value">
@@ -1496,20 +1479,20 @@ export default function Management({ page }: { page: Page }) {
                 </div>
               ) : (
                 <Empty
-                  title={"Your bestsellers will appear here"}
-                  subtitle={"Complete your first sale to get started."}
+                  title={tr("Your bestsellers will appear here")}
+                  subtitle={tr("Complete your first sale to get started.")}
                 />
               )}
             </section>
             <section className="panel operations-panel">
               <div className="management-card-heading">
                 <div>
-                  <h2>{"Store activity"}</h2>
-                  <p>{"A pulse on your store"}</p>
+                  <h2>{tr("Store activity")}</h2>
+                  <p>{tr("A pulse on your store")}</p>
                 </div>
                 <span className="management-pill green">
                   <span className="live-dot" />
-                  {"Live"}
+                  {tr("Live")}
                 </span>
               </div>
               <div className="operation-stat">
@@ -1517,7 +1500,7 @@ export default function Management({ page }: { page: Page }) {
                   <ShoppingBag size={19} />
                 </span>
                 <div>
-                  <span>{"Active orders"}</span>
+                  <span>{tr("Active orders")}</span>
                   <strong>
                     {
                       orders.filter(
@@ -1534,7 +1517,7 @@ export default function Management({ page }: { page: Page }) {
                   <Users size={19} />
                 </span>
                 <div>
-                  <span>Customer dues</span><strong>{money(data.customers.reduce((sum,customer)=>sum+Math.max(0,customer.balance),0))}</strong>
+                  <span>{tr("Customer dues")}</span><strong>{money(data.customers.reduce((sum,customer)=>sum+Math.max(0,customer.balance),0))}</strong>
                 </div>
               </div>
               <div className="operation-stat">
@@ -1542,21 +1525,21 @@ export default function Management({ page }: { page: Page }) {
                   <Package size={19} />
                 </span>
                 <div>
-                  <span>{"Low-stock ingredients"}</span>
+                  <span>{tr("Low-stock ingredients")}</span>
                   <strong>{lowStock.length}</strong>
                 </div>
                 <Pill tone={lowStock.length ? "amber" : "green"}>
-                  {lowStock.length ? "Check stock" : "Healthy"}
+                  {lowStock.length ? tr("Check stock") : tr("Healthy")}
                 </Pill>
               </div>
               <div className="overview-sync">
                 <ShieldCheck size={18} />
                 <div>
-                  <strong>{"Your data stays with you"}</strong>
+                  <strong>{tr("Your data stays with you")}</strong>
                   <span>
                     {data.sync.pending
                       ? `${data.sync.pending} ${"changes waiting to sync"}`
-                      : "All changes saved to the branch hub"}
+                      : tr("All changes saved to the branch hub")}
                   </span>
                 </div>
               </div>
@@ -1569,20 +1552,20 @@ export default function Management({ page }: { page: Page }) {
         <>
           <div className="management-stats three">
             <Stat
-              label={"Inventory value"}
+              label={tr("Inventory value")}
               amount={money(Math.round(stockValue))}
               note={"At recorded purchase cost"}
               icon={<Package size={18} />}
               accent
             />
             <Stat
-              label={"Items tracked"}
+              label={tr("Items tracked")}
               amount={number(inventory.length)}
               note={"Across all stock categories"}
               icon={<Layers3 size={18} />}
             />
             <Stat
-              label={"Need attention"}
+              label={tr("Need attention")}
               amount={number(lowStock.length)}
               note={"At or below reorder level"}
               icon={<Activity size={18} />}
@@ -1611,19 +1594,19 @@ export default function Management({ page }: { page: Page }) {
               <SearchField
                 value={search}
                 onChange={setSearch}
-                placeholder={"Find an item…"}
+                placeholder={tr("Find an item…")}
               />
             </div>
             <div className="table-scroll">
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>{"Item"}</th>
-                    <th>{"Category"}</th>
-                    <th>{"In stock"}</th>
-                    <th>{"Reorder level"}</th>
-                    <th>{"Unit cost"}</th>
-                    <th>{"Status"}</th>
+                    <th>{tr("Item")}</th>
+                    <th>{tr("Category")}</th>
+                    <th>{tr("In stock")}</th>
+                    <th>{tr("Reorder level")}</th>
+                    <th>{tr("Unit cost")}</th>
+                    <th>{tr("Status")}</th>
                     <th />
                   </tr>
                 </thead>
@@ -1643,12 +1626,12 @@ export default function Management({ page }: { page: Page }) {
                       </td>
                       <td>
                         {item.category === "ingredient"
-                          ? "Ingredient"
+                          ? tr("Ingredient")
                           : item.category === "prepared"
-                            ? "Tracked product"
+                            ? tr("Tracked product")
                             : item.category === "packaging"
-                              ? "Packaging"
-                              : "Resale"}
+                              ? tr("Packaging")
+                              : tr("Resale")}
                       </td>
                       <td>
                         <strong
@@ -1676,10 +1659,10 @@ export default function Management({ page }: { page: Page }) {
                           }
                         >
                           {item.quantity <= 0
-                            ? "Out of stock"
+                            ? tr("Out of stock")
                             : item.quantity <= item.minimum
-                              ? "Running low"
-                              : "In stock"}
+                              ? tr("Running low")
+                              : tr("In stock")}
                         </Pill>
                       </td>
                       <td>
@@ -1691,7 +1674,7 @@ export default function Management({ page }: { page: Page }) {
                           }}
                         >
                           <SlidersHorizontal size={14} />
-                          {"Adjust"}
+                          {tr("Adjust")}
                         </button>
                       </td>
                     </tr>
@@ -1699,24 +1682,24 @@ export default function Management({ page }: { page: Page }) {
                 </tbody>
               </table>
               {!visibleInventory.length && (
-                <Empty title={"No matching stock items"} />
+                <Empty title={tr("No matching stock items")} />
               )}
             </div>
             <div className="management-table-footer">
               <span>
-                {visibleInventory.length} {"items"}
+                {visibleInventory.length} {tr("items")}
               </span>
               <span>
                 <ShieldCheck size={13} />
-                {"All adjustments are audited"}
+                {tr("All adjustments are audited")}
               </span>
             </div>
           </section>
           <section className="panel movement-panel">
             <div className="management-card-heading">
               <div>
-                <h2>{"Stock activity"}</h2>
-                <p>{"A complete trail of your latest stock movements"}</p>
+                <h2>{tr("Stock activity")}</h2>
+                <p>{tr("A complete trail of your latest stock movements")}</p>
               </div>
               <Activity size={18} />
             </div>
@@ -1758,7 +1741,7 @@ export default function Management({ page }: { page: Page }) {
                 ))}
               {!data.stockMovements.some(
                 (movement) => movement.branchId === branchId,
-              ) && <Empty title={"Stock movements appear here"} />}
+              ) && <Empty title={tr("Stock movements appear here")} />}
             </div>
           </section>
         </>
@@ -1768,7 +1751,7 @@ export default function Management({ page }: { page: Page }) {
         <>
           <div className="management-stats three">
             <Stat
-              label={"Batches prepared"}
+              label={tr("Batches prepared")}
               amount={number(
                 data.production.filter(
                   (batch) =>
@@ -1781,7 +1764,7 @@ export default function Management({ page }: { page: Page }) {
               accent
             />
             <Stat
-              label={"Portions produced"}
+              label={tr("Portions produced")}
               amount={number(
                 data.production
                   .filter(
@@ -1795,7 +1778,7 @@ export default function Management({ page }: { page: Page }) {
               icon={<Coffee size={18} />}
             />
             <Stat
-              label={"Available to prepare"}
+              label={tr("Available to prepare")}
               amount={number(preparedMenu.length)}
               note={"Prepared-stock menu items"}
               icon={<BookOpen size={18} />}
@@ -1806,37 +1789,37 @@ export default function Management({ page }: { page: Page }) {
               <Flame size={26} />
             </span>
             <div>
-              <h2>{"A better-prepared kitchen."}</h2>
+              <h2>{tr("A better-prepared kitchen.")}</h2>
               <p>
                 {
-                  "Record a production batch to add prepared portions to stock. Recipe ingredients are deducted automatically."
+                  tr("Record a production batch to add prepared portions to stock. Recipe ingredients are deducted automatically.")
                 }
               </p>
             </div>
             <span className="management-pill green">
               <Check size={13} />
-              {"Stock connected"}
+              {tr("Stock connected")}
             </span>
           </div>
           <section className="panel management-table-panel">
             <div className="management-table-toolbar">
-              <h2>{"Production history"}</h2>
+              <h2>{tr("Production history")}</h2>
               <SearchField
                 value={search}
                 onChange={setSearch}
-                placeholder={"Find a batch…"}
+                placeholder={tr("Find a batch…")}
               />
             </div>
             <div className="table-scroll">
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>{"Prepared item"}</th>
-                    <th>{"Batch reference"}</th>
-                    <th>{"Quantity"}</th>
-                    <th>{"Batch cost"}</th>
-                    <th>{"Note"}</th>
-                    <th>{"Prepared at"}</th>
+                    <th>{tr("Prepared item")}</th>
+                    <th>{tr("Batch reference")}</th>
+                    <th>{tr("Quantity")}</th>
+                    <th>{tr("Batch cost")}</th>
+                    <th>{tr("Note")}</th>
+                    <th>{tr("Prepared at")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1870,7 +1853,7 @@ export default function Management({ page }: { page: Page }) {
                         </td>
                         <td>
                           <strong>{number(batch.quantity)}</strong>{" "}
-                          <span className="muted">{"portions"}</span>
+                          <span className="muted">{tr("portions")}</span>
                         </td>
                         <td>{money(batch.cost)}</td>
                         <td className="muted">{batch.note || "—"}</td>
@@ -1886,9 +1869,9 @@ export default function Management({ page }: { page: Page }) {
                   batch.name.toLowerCase().includes(search.toLowerCase()),
               ) && (
                 <Empty
-                  title={"No production recorded"}
+                  title={tr("No production recorded")}
                   subtitle={
-                    "Start a new batch to keep prepared stock accurate."
+                    tr("Start a new batch to keep prepared stock accurate.")
                   }
                 />
               )}
@@ -1901,7 +1884,7 @@ export default function Management({ page }: { page: Page }) {
         <>
           <div className="management-stats three">
             <Stat
-              label={"Purchases"}
+              label={tr("Purchases")}
               amount={money(
                 data.purchases
                   .filter(
@@ -1916,13 +1899,13 @@ export default function Management({ page }: { page: Page }) {
               accent
             />
             <Stat
-              label={"Active suppliers"}
+              label={tr("Active suppliers")}
               amount={number(data.suppliers.length)}
               note={"Trusted supply partners"}
               icon={<Users size={18} />}
             />
             <Stat
-              label={"Supplier balances"}
+              label={tr("Supplier balances")}
               amount={money(
                 data.suppliers.reduce(
                   (sum, supplier) => sum + supplier.balance,
@@ -1935,23 +1918,23 @@ export default function Management({ page }: { page: Page }) {
           </div>
           <section className="panel management-table-panel">
             <div className="management-table-toolbar">
-              <h2>{"Purchase register"}</h2>
+              <h2>{tr("Purchase register")}</h2>
               <SearchField
                 value={search}
                 onChange={setSearch}
-                placeholder={"Invoice or supplier…"}
+                placeholder={tr("Invoice or supplier…")}
               />
             </div>
             <div className="table-scroll">
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>{"Invoice"}</th>
-                    <th>{"Supplier"}</th>
-                    <th>{"Items"}</th>
-                    <th>{"Total"}</th>
-                    <th>{"Status"}</th>
-                    <th>{"Received at"}</th>
+                    <th>{tr("Invoice")}</th>
+                    <th>{tr("Supplier")}</th>
+                    <th>{tr("Items")}</th>
+                    <th>{tr("Total")}</th>
+                    <th>{tr("Status")}</th>
+                    <th>{tr("Received at")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1981,7 +1964,7 @@ export default function Management({ page }: { page: Page }) {
                         <td>
                           <details className="purchase-details">
                             <summary>
-                              {purchase.lines.length} {"items"}
+                              {purchase.lines.length} {tr("items")}
                               <ChevronDown size={12} />
                             </summary>
                             <div>
@@ -2000,7 +1983,7 @@ export default function Management({ page }: { page: Page }) {
                         <td>
                           <Pill tone="green">
                             <Check size={12} />
-                            {"Received"}
+                            {tr("Received")}
                           </Pill>
                         </td>
                         <td className="muted">
@@ -2017,14 +2000,14 @@ export default function Management({ page }: { page: Page }) {
                   `${purchase.invoiceNumber} ${purchase.supplierName}`
                     .toLowerCase()
                     .includes(search.toLowerCase()),
-              ) && <Empty title={"No purchases found"} />}
+              ) && <Empty title={tr("No purchases found")} />}
             </div>
           </section>
           <section className="suppliers-section">
             <div className="section-heading">
-              <h2>{"Your supply partners"}</h2>
+              <h2>{tr("Your supply partners")}</h2>
               <span>
-                {data.suppliers.length} {"suppliers"}
+                {data.suppliers.length} {tr("suppliers")}
               </span>
             </div>
             <div className="supplier-grid">
@@ -2034,9 +2017,9 @@ export default function Management({ page }: { page: Page }) {
                     <Truck size={21} />
                   </span>
                   <h3>{supplier.name}</h3>
-                  <p>{supplier.phone || "No phone provided"}</p>
+                  <p>{supplier.phone || tr("No phone provided")}</p>
                   <div>
-                    <span>{"Outstanding balance"}</span>
+                    <span>{tr("Outstanding balance")}</span>
                     <strong>{money(supplier.balance)}</strong>
                   </div>
                   {supplier.email && (
@@ -2058,7 +2041,7 @@ export default function Management({ page }: { page: Page }) {
         <>
           <div className="management-stats three">
             <Stat
-              label={"Team members"}
+              label={tr("Team members")}
               amount={number(
                 data.staff.filter(
                   (member) => !member.branchId || member.branchId === branchId,
@@ -2069,7 +2052,7 @@ export default function Management({ page }: { page: Page }) {
               accent
             />
             <Stat
-              label={"Active access"}
+              label={tr("Active access")}
               amount={number(
                 data.staff.filter(
                   (member) =>
@@ -2081,7 +2064,7 @@ export default function Management({ page }: { page: Page }) {
               icon={<ShieldCheck size={18} />}
             />
             <Stat
-              label={"Access roles"}
+              label={tr("Access roles")}
               amount="7"
               note={"Permissions for every responsibility"}
               icon={<Layers3 size={18} />}
@@ -2089,22 +2072,22 @@ export default function Management({ page }: { page: Page }) {
           </div>
           <section className="panel management-table-panel">
             <div className="management-table-toolbar">
-              <h2>{"People & permissions"}</h2>
+              <h2>{tr("People & permissions")}</h2>
               <SearchField
                 value={search}
                 onChange={setSearch}
-                placeholder={"Find a team member…"}
+                placeholder={tr("Find a team member…")}
               />
             </div>
             <div className="table-scroll">
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>{"Team member"}</th>
-                    <th>{"Role"}</th>
-                    <th>{"Branch"}</th>
-                    <th>{"Last active"}</th>
-                    <th>{"Status"}</th>
+                    <th>{tr("Team member")}</th>
+                    <th>{tr("Role")}</th>
+                    <th>{tr("Branch")}</th>
+                    <th>{tr("Last active")}</th>
+                    <th>{tr("Status")}</th>
                     <th />
                   </tr>
                 </thead>
@@ -2126,7 +2109,7 @@ export default function Management({ page }: { page: Page }) {
                             </span>
                             <div>
                               <strong>{member.name}</strong>
-                              <small>{member.phone || "Team member"}</small>
+                              <small>{member.phone || tr("Team member")}</small>
                             </div>
                           </div>
                         </td>
@@ -2140,16 +2123,16 @@ export default function Management({ page }: { page: Page }) {
                                   (branch) => branch.id === member.branchId,
                                 ) || { name: member.branchId },
                               )
-                            : "All branches"}
+                            : tr("All branches")}
                         </td>
                         <td className="muted">
                           {member.lastActive
                             ? dateTime(member.lastActive)
-                            : "Not yet signed in"}
+                            : tr("Not yet signed in")}
                         </td>
                         <td>
                           <Pill tone={member.active ? "green" : ""}>
-                            {member.active ? "Active" : "Disabled"}
+                            {member.active ? tr("Active") : tr("Disabled")}
                           </Pill>
                         </td>
                         <td>
@@ -2170,12 +2153,12 @@ export default function Management({ page }: { page: Page }) {
                               }
                             >
                               {member.active
-                                ? "Disable access"
-                                : "Enable access"}
+                                ? tr("Disable access")
+                                : tr("Enable access")}
                             </button>
                           )}
                           {member.id === data.user.id && (
-                            <span className="muted">{"You"}</span>
+                            <span className="muted">{tr("You")}</span>
                           )}
                         </td>
                       </tr>
@@ -2188,13 +2171,13 @@ export default function Management({ page }: { page: Page }) {
                   `${member.name} ${member.role}`
                     .toLowerCase()
                     .includes(search.toLowerCase()),
-              ) && <Empty title={"No matching team members"} />}
+              ) && <Empty title={tr("No matching team members")} />}
             </div>
             <div className="management-table-footer">
               <span>
                 <ShieldCheck size={14} />
                 {
-                  "Every sign-in and sensitive action is recorded in the audit trail."
+                  tr("Every sign-in and sensitive action is recorded in the audit trail.")
                 }
               </span>
             </div>
@@ -2206,26 +2189,26 @@ export default function Management({ page }: { page: Page }) {
         <>
           <div className="management-stats">
             <Stat
-              label={"Sales revenue"}
+              label={tr("Sales revenue")}
               amount={money(revenue)}
               note={"Settled orders in this period"}
               icon={<TrendingUp size={18} />}
               accent
             />
             <Stat
-              label={"Operating expenses"}
+              label={tr("Operating expenses")}
               amount={money(expenseTotal)}
               note={`${expenses.length} ${"recorded expenses"}`}
               icon={<ArrowUpRight size={18} />}
             />
             <Stat
-              label={"Revenue less expenses"}
+              label={tr("Revenue less expenses")}
               amount={money(revenue - expenseTotal)}
               note={"Before product costs & other adjustments"}
               icon={<CircleDollarSign size={18} />}
             />
             <Stat
-              label={"Expected drawer cash"}
+              label={tr("Expected drawer cash")}
               amount={money(activeShift?.expectedCash || 0)}
               note={
                 activeShift
@@ -2244,13 +2227,13 @@ export default function Management({ page }: { page: Page }) {
             <div>
               <h2>
                 {activeShift
-                  ? "Your cash shift is open"
-                  : "Start with a balanced drawer"}
+                  ? tr("Your cash shift is open")
+                  : tr("Start with a balanced drawer")}
               </h2>
               <p>
                 {activeShift
                   ? `${"Opened"} ${dateTime(activeShift.openedAt)} · ${"Opening float"} ${money(activeShift.openingFloat)}`
-                  : "Open a shift to track cash sales, expenses and your closing balance."}
+                  : tr("Open a shift to track cash sales, expenses and your closing balance.")}
               </p>
             </div>
             <button
@@ -2260,28 +2243,28 @@ export default function Management({ page }: { page: Page }) {
                 open(activeShift ? "shift-close" : "shift-open");
               }}
             >
-              {activeShift ? "Close & reconcile" : "Open cash shift"}
+              {activeShift ? tr("Close & reconcile") : tr("Open cash shift")}
               <ArrowRight size={16} />
             </button>
           </section>
           <section className="panel management-table-panel">
             <div className="management-table-toolbar">
-              <h2>{"Expense ledger"}</h2>
+              <h2>{tr("Expense ledger")}</h2>
               <SearchField
                 value={search}
                 onChange={setSearch}
-                placeholder={"Search expenses…"}
+                placeholder={tr("Search expenses…")}
               />
             </div>
             <div className="table-scroll">
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>{"Expense"}</th>
-                    <th>{"Category"}</th>
-                    <th>{"Paid by"}</th>
-                    <th>{"Amount"}</th>
-                    <th>{"Date & time"}</th>
+                    <th>{tr("Expense")}</th>
+                    <th>{tr("Category")}</th>
+                    <th>{tr("Paid by")}</th>
+                    <th>{tr("Amount")}</th>
+                    <th>{tr("Date & time")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2323,9 +2306,9 @@ export default function Management({ page }: { page: Page }) {
                   .includes(search.toLowerCase()),
               ) && (
                 <Empty
-                  title={"No expenses recorded"}
+                  title={tr("No expenses recorded")}
                   subtitle={
-                    "Keep business expenses here for an accurate daily picture."
+                    tr("Keep business expenses here for an accurate daily picture.")
                   }
                 />
               )}
@@ -2334,8 +2317,8 @@ export default function Management({ page }: { page: Page }) {
           <section className="panel management-table-panel">
             <div className="management-card-heading">
               <div>
-                <h2>{"Cash shift history"}</h2>
-                <p>{"A clear reconciliation for every shift"}</p>
+                <h2>{tr("Cash shift history")}</h2>
+                <p>{tr("A clear reconciliation for every shift")}</p>
               </div>
               <Clock3 size={18} />
             </div>
@@ -2343,12 +2326,12 @@ export default function Management({ page }: { page: Page }) {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>{"Opened"}</th>
-                    <th>{"Opening float"}</th>
-                    <th>{"Expected"}</th>
-                    <th>{"Counted"}</th>
-                    <th>{"Variance"}</th>
-                    <th>{"Status"}</th>
+                    <th>{tr("Opened")}</th>
+                    <th>{tr("Opening float")}</th>
+                    <th>{tr("Expected")}</th>
+                    <th>{tr("Counted")}</th>
+                    <th>{tr("Variance")}</th>
+                    <th>{tr("Status")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2375,7 +2358,7 @@ export default function Management({ page }: { page: Page }) {
                         </td>
                         <td>
                           <Pill tone={shift.status === "open" ? "green" : ""}>
-                            {shift.status === "open" ? "Open" : "Closed"}
+                            {shift.status === "open" ? tr("Open") : tr("Closed")}
                           </Pill>
                         </td>
                       </tr>
@@ -2383,7 +2366,7 @@ export default function Management({ page }: { page: Page }) {
                 </tbody>
               </table>
               {!data.shifts.some((shift) => shift.branchId === branchId) && (
-                <Empty title={"No shifts yet"} />
+                <Empty title={tr("No shifts yet")} />
               )}
             </div>
           </section>
@@ -2397,8 +2380,8 @@ export default function Management({ page }: { page: Page }) {
             <section className="panel revenue-panel">
               <div className="management-card-heading">
                 <div>
-                  <h2>{"Sales performance"}</h2>
-                  <p>{"Revenue from settled orders"}</p>
+                  <h2>{tr("Sales performance")}</h2>
+                  <p>{tr("Revenue from settled orders")}</p>
                 </div>
                 <TrendingUp size={18} />
               </div>
@@ -2409,7 +2392,7 @@ export default function Management({ page }: { page: Page }) {
           </div>
           <section className="panel management-table-panel">
             <div className="management-table-toolbar">
-              <h2>{"Item performance"}</h2>
+              <h2>{tr("Item performance")}</h2>
               <button
                 className="button button-ghost button-small"
                 onClick={() =>
@@ -2427,17 +2410,17 @@ export default function Management({ page }: { page: Page }) {
                 }
               >
                 <Download size={14} />
-                {"Export items"}
+                {tr("Export items")}
               </button>
             </div>
             <div className="table-scroll">
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>{"Menu item"}</th>
-                    <th>{"Portions sold"}</th>
-                    <th>{"Gross item sales"}</th>
-                    <th>{"Sales share"}</th>
+                    <th>{tr("Menu item")}</th>
+                    <th>{tr("Portions sold")}</th>
+                    <th>{tr("Gross item sales")}</th>
+                    <th>{tr("Sales share")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2474,13 +2457,13 @@ export default function Management({ page }: { page: Page }) {
                   ))}
                 </tbody>
               </table>
-              {!topItems.length && <Empty title={"No sales in this period"} />}
+              {!topItems.length && <Empty title={tr("No sales in this period")} />}
             </div>
           </section>
           <section className="panel management-table-panel">
             <div className="management-card-heading">
               <div>
-                <h2>{"Audit trail"}</h2>
+                <h2>{tr("Audit trail")}</h2>
                 <p>{"Business-critical activity, securely recorded"}</p>
               </div>
               <ShieldCheck size={18} />
@@ -2489,10 +2472,10 @@ export default function Management({ page }: { page: Page }) {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>{"Activity"}</th>
-                    <th>{"Detail"}</th>
-                    <th>{"By"}</th>
-                    <th>{"Date & time"}</th>
+                    <th>{tr("Activity")}</th>
+                    <th>{tr("Detail")}</th>
+                    <th>{tr("By")}</th>
+                    <th>{tr("Date & time")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2523,7 +2506,7 @@ export default function Management({ page }: { page: Page }) {
                 (event) =>
                   (!event.branchId || event.branchId === branchId) &&
                   isWithin(event.createdAt, range, data.serverTime),
-              ) && <Empty title={"No activity in this period"} />}
+              ) && <Empty title={tr("No activity in this period")} />}
             </div>
           </section>
         </>
@@ -2538,7 +2521,7 @@ export default function Management({ page }: { page: Page }) {
                 submit(
                   event,
                   async () => {
-                    const submittedChanges:Partial<Settings>={...settingsChanges.current,language:"en"};
+                    const submittedChanges:Partial<Settings>={...settingsChanges.current};
                     const saved=await mutate<{settings:Settings}>("/settings", submittedChanges, "PUT");
                     // Keep edits made while this save and its refresh were pending.
                     settingsChanges.current=Object.fromEntries(Object.entries(settingsChanges.current).filter(([key,value])=>value!==submittedChanges[key as keyof Settings]));
@@ -2550,17 +2533,17 @@ export default function Management({ page }: { page: Page }) {
             >
               <div className="management-card-heading">
                 <div>
-                  <h2>{"Business profile"}</h2>
+                  <h2>{tr("Business profile")}</h2>
                   <p>
                     {
-                      "The details that appear across your workspace and receipts"
+                      tr("The details that appear across your workspace and receipts")
                     }
                   </p>
                 </div>
                 <ShoppingBag size={18} />
               </div>
               <div className="form-grid">
-                <Field label={"Business name"}>
+                <Field label={tr("Business name")}>
                   <input
                     className="input"
                     required
@@ -2574,7 +2557,7 @@ export default function Management({ page }: { page: Page }) {
                     }
                   />
                 </Field>
-                <Field label={"Tagline"}>
+                <Field label={tr("Tagline")}>
                   <input
                     className="input"
                     maxLength={160}
@@ -2584,7 +2567,7 @@ export default function Management({ page }: { page: Page }) {
                     }
                   />
                 </Field>
-                <Field label={"Tax rate (%)"}>
+                <Field label={tr("Tax rate (%)")}>
                   <input
                     className="input"
                     type="number"
@@ -2601,7 +2584,7 @@ export default function Management({ page }: { page: Page }) {
                     }
                   />
                 </Field>
-                <Field label={"Service charge (%)"}>
+                <Field label={tr("Service charge (%)")}>
                   <input
                     className="input"
                     type="number"
@@ -2618,18 +2601,19 @@ export default function Management({ page }: { page: Page }) {
                     }
                   />
                 </Field>
-                <Field label={"Default language"}>
-                  <select className="select" value="en" disabled>
-                    <option value="en">English</option>
+                <Field label={tr("Language on this device")}>
+                  <select className="select" value={locale} onChange={event => setLocale(event.target.value === "si" ? "si" : "en")}>
+                    <option value="en" lang="en">English</option>
+                    <option value="si" lang="si">සිංහල</option>
                   </select>
                 </Field>
-                <Field label={"Currency"}>
+                <Field label={tr("Currency")}>
                   <input className="input" value={settings.currency} disabled />
                   <small className="field-hint">
-                    {"Sri Lankan rupees · LKR"}
+                    {tr("Sri Lankan rupees · LKR")}
                   </small>
                 </Field>
-                <Field label={"Receipt footer"} full>
+                <Field label={tr("Receipt footer")} full>
                   <textarea
                     className="input"
                     rows={3}
@@ -2647,9 +2631,9 @@ export default function Management({ page }: { page: Page }) {
               <div className="settings-switches">
                 <label>
                   <span>
-                    <strong>{"Low stock alerts"}</strong>
+                    <strong>{tr("Low stock alerts")}</strong>
                     <small>
-                      {"Highlight ingredients that reach their reorder level"}
+                      {tr("Highlight ingredients that reach their reorder level")}
                     </small>
                   </span>
                   <input
@@ -2666,10 +2650,10 @@ export default function Management({ page }: { page: Page }) {
                 </label>
                 <label>
                   <span>
-                    <strong>{"Print after payment"}</strong>
+                    <strong>{tr("Print after payment")}</strong>
                     <small>
                       {
-                        "Open the receipt print dialog after a successful payment"
+                        tr("Open the receipt print dialog after a successful payment")
                       }
                     </small>
                   </span>
@@ -2696,15 +2680,15 @@ export default function Management({ page }: { page: Page }) {
                   type="submit"
                 >
                   <Check size={16} />
-                  {busy ? "Saving…" : "Save changes"}
+                  {busy ? tr("Saving…") : tr("Save changes")}
                 </button>
               </div>
             </form>
             <section className="panel settings-card">
               <div className="management-card-heading">
                 <div>
-                  <h2>{"Branch locations"}</h2>
-                  <p>{"Connected locations in your store network"}</p>
+                  <h2>{tr("Branch locations")}</h2>
+                  <p>{tr("Connected locations in your store network")}</p>
                 </div>
                 <Layers3 size={18} />
               </div>
@@ -2718,7 +2702,7 @@ export default function Management({ page }: { page: Page }) {
                       <small>{branch.phone}</small>
                     </div>
                     {branch.id === branchId && (
-                      <Pill tone="green">{"Current"}</Pill>
+                      <Pill tone="green">{tr("Current")}</Pill>
                     )}
                   </div>
                 ))}
@@ -2731,40 +2715,40 @@ export default function Management({ page }: { page: Page }) {
                 <ShieldCheck size={28} />
                 <span />
               </div>
-              <Pill tone="green">{"Local-first"}</Pill>
-              <h2>{"Built to keep going."}</h2>
+              <Pill tone="green">{tr("Local-first")}</Pill>
+              <h2>{tr("Built to keep going.")}</h2>
               <p>
                 {
-                  "Sales are saved securely to your branch hub. Cloud sync keeps a second copy when the internet is available."
+                  tr("Sales are saved securely to your branch hub. Cloud sync keeps a second copy when the internet is available.")
                 }
               </p>
               <div className="sync-status-list">
                 <div>
-                  <span>{"Branch hub"}</span>
+                  <span>{tr("Branch hub")}</span>
                   <Pill tone={data.sync.hubOnline ? "green" : "amber"}>
-                    {data.sync.hubOnline ? "Connected" : "Disconnected"}
+                    {data.sync.hubOnline ? tr("Connected") : tr("Disconnected")}
                   </Pill>
                 </div>
                 <div>
-                  <span>Firebase</span>
+                  <span>{tr("Firebase")}</span>
                   <Pill tone={data.sync.configured ? "green" : "amber"}>
-                    {data.sync.configured ? "Configured" : "Not configured"}
+                    {data.sync.configured ? tr("Configured") : tr("Not configured")}
                   </Pill>
                 </div>
                 <div>
-                  <span>{"Pending changes"}</span>
+                  <span>{tr("Pending changes")}</span>
                   <strong>{data.sync.pending}</strong>
                 </div>
                 <div>
-                  <span>{"Synced records"}</span>
+                  <span>{tr("Synced records")}</span>
                   <strong>{number(data.sync.synced)}</strong>
                 </div>
                 <div>
-                  <span>{"Last synced"}</span>
+                  <span>{tr("Last synced")}</span>
                   <small>
                     {data.sync.lastSync
                       ? dateTime(data.sync.lastSync)
-                      : "Not yet"}
+                      : tr("Not yet")}
                   </small>
                 </div>
               </div>
@@ -2779,12 +2763,12 @@ export default function Management({ page }: { page: Page }) {
                 }
               >
                 <Cloud size={16} />
-                {"Sync now"}
+                {tr("Sync now")}
               </button>
               {!data.sync.configured && (
                 <p className="settings-small-note">
                   {
-                    "Cloud sync is not connected. An administrator can configure it securely on the server."
+                    tr("Cloud sync is not connected. An administrator can configure it securely on the server.")
                   }
                 </p>
               )}
@@ -2792,8 +2776,8 @@ export default function Management({ page }: { page: Page }) {
             {!isDeviceWorkspace() && <section className="panel settings-backup">
               <div className="management-card-heading">
                 <div>
-                  <h2>{"Database backup"}</h2>
-                  <p>{"An independent copy for safekeeping"}</p>
+                  <h2>{tr("Database backup")}</h2>
+                  <p>{tr("An independent copy for safekeeping")}</p>
                 </div>
                 <Download size={18} />
               </div>
@@ -2806,7 +2790,7 @@ export default function Management({ page }: { page: Page }) {
                 <Clock3 size={14} />
                 {data.sync.lastBackup
                   ? dateTime(data.sync.lastBackup)
-                  : "No backup created yet"}
+                  : tr("No backup created yet")}
               </div>
               <button
                 className="button button-ghost full-width"
@@ -2824,7 +2808,7 @@ export default function Management({ page }: { page: Page }) {
                 }
               >
                 <ArrowDownToLine size={16} />
-                {"Create & download backup"}
+                {tr("Create & download backup")}
               </button>
             </section>}
           </aside>}
@@ -2836,34 +2820,34 @@ export default function Management({ page }: { page: Page }) {
         <Modal
           title={
             dialog === "customer-ledger"
-              ? "Customer ledger & collection"
+              ? tr("Customer ledger & collection")
               : dialog === "inventory-create"
-                ? "Add inventory item"
+                ? tr("Add inventory item")
                 : dialog === "supplier"
-                  ? "Add supplier"
+                  ? tr("Add supplier")
                   : dialog === "menu"
                     ? editingMenu
-                      ? "Edit menu item"
-                      : "Add menu item"
+                      ? tr("Edit menu item")
+                      : tr("Add menu item")
                     : dialog === "recipe"
-                      ? `Recipe · ${editingMenu?.name || ""}`
+                      ? tr("Recipe · {0}", editingMenu?.name || "")
                       : dialog === "stock"
-                        ? "Adjust inventory"
+                        ? tr("Adjust inventory")
                         : dialog === "production"
-                          ? "New production batch"
+                          ? tr("New production batch")
                           : dialog === "purchase"
-                            ? "Record a purchase"
+                            ? tr("Record a purchase")
                             : dialog === "customer"
-                              ? "Add a guest"
+                              ? tr("Add a guest")
                               : dialog === "staff"
-                                ? "Invite a team member"
+                                ? tr("Invite a team member")
                                 : dialog === "expense"
-                                  ? "Record an expense"
+                                  ? tr("Record an expense")
                                   : dialog === "shift-open"
-                                    ? "Open a cash shift"
-                                    : "Close & reconcile shift"
+                                    ? tr("Open a cash shift")
+                                    : tr("Close & reconcile shift")
           }
-          subtitle={"Changes are saved to your branch hub."}
+          subtitle={tr("Changes are saved to your branch hub.")}
           close={close}
         >
           {dialog === "inventory-create" && (
@@ -2889,17 +2873,17 @@ export default function Management({ page }: { page: Page }) {
               }
             >
               <div className="form-grid">
-                <Field label="Item name" full>
+                <Field label={tr("Item name")} full>
                   <input
                     className="input"
                     name="name"
                     required
                     minLength={2}
                     maxLength={120}
-                    placeholder="e.g. Basmati rice"
+                    placeholder={tr("e.g. Basmati rice")}
                   />
                 </Field>
-                <Field label="Stock category">
+                <Field label={tr("Stock category")}>
                   <select
                     className="select"
                     required
@@ -2910,29 +2894,29 @@ export default function Management({ page }: { page: Page }) {
                       )
                     }
                   >
-                    <option value="ingredient">Ingredient</option>
-                    <option value="prepared">Tracked product</option>
-                    <option value="packaging">Packaging</option>
-                    <option value="resale">Resale item</option>
+                    <option value="ingredient">{tr("Ingredient")}</option>
+                    <option value="prepared">{tr("Tracked product")}</option>
+                    <option value="packaging">{tr("Packaging")}</option>
+                    <option value="resale">{tr("Resale item")}</option>
                   </select>
                 </Field>
-                <Field label="Stock unit">
+                <Field label={tr("Stock unit")}>
                   <select
                     className="select"
                     name="unit"
                     required
                     defaultValue="kg"
                   >
-                    <option value="kg">Kilograms (kg)</option>
-                    <option value="g">Grams (g)</option>
-                    <option value="L">Litres (L)</option>
-                    <option value="ml">Millilitres (ml)</option>
-                    <option value="pcs">Pieces (pcs)</option>
-                    <option value="portions">Portions</option>
-                    <option value="packs">Packs</option>
+                    <option value="kg">{tr("Kilograms (kg)")}</option>
+                    <option value="g">{tr("Grams (g)")}</option>
+                    <option value="L">{tr("Litres (L)")}</option>
+                    <option value="ml">{tr("Millilitres (ml)")}</option>
+                    <option value="pcs">{tr("Pieces (pcs)")}</option>
+                    <option value="portions">{tr("Portions")}</option>
+                    <option value="packs">{tr("Packs")}</option>
                   </select>
                 </Field>
-                <Field label="Opening quantity">
+                <Field label={tr("Opening quantity")}>
                   <input
                     className="input"
                     name="quantity"
@@ -2944,7 +2928,7 @@ export default function Management({ page }: { page: Page }) {
                     defaultValue="0"
                   />
                 </Field>
-                <Field label="Reorder level">
+                <Field label={tr("Reorder level")}>
                   <input
                     className="input"
                     name="minimum"
@@ -2956,7 +2940,7 @@ export default function Management({ page }: { page: Page }) {
                     defaultValue="0"
                   />
                 </Field>
-                <Field label="Cost per stock unit (LKR)">
+                <Field label={tr("Cost per stock unit (LKR)")}>
                   <input
                     className="input"
                     name="unitCost"
@@ -2967,9 +2951,9 @@ export default function Management({ page }: { page: Page }) {
                     placeholder="0.00"
                   />
                 </Field>
-                <Field label="Supplier (optional)">
+                <Field label={tr("Supplier (optional)")}>
                   <select className="select" name="supplierId" defaultValue="">
-                    <option value="">Not assigned</option>
+                    <option value="">{tr("Not assigned")}</option>
                     {data.suppliers.map((supplier) => (
                       <option key={supplier.id} value={supplier.id}>
                         {supplier.name}
@@ -2978,14 +2962,14 @@ export default function Management({ page }: { page: Page }) {
                   </select>
                 </Field>
                 {stockCategory === "prepared" && (
-                  <Field label="Linked menu item" full>
+                  <Field label={tr("Linked menu item")} full>
                     <select
                       className="select"
                       name="menuItemId"
                       required
                       defaultValue=""
                     >
-                      <option value="">Select a prepared menu item</option>
+                      <option value="">{tr("Select a prepared menu item")}</option>
                       {data.menu
                         .filter(
                           (item) =>
@@ -3002,10 +2986,7 @@ export default function Management({ page }: { page: Page }) {
                           </option>
                         ))}
                     </select>
-                    <small className="field-hint">
-                      Create the dish in Settings → Menu & recipes first, then
-                      link its prepared stock here.
-                    </small>
+                    <small className="field-hint">{tr("Create the dish in Settings → Menu & recipes first, then link its prepared stock here.")}</small>
                   </Field>
                 )}
               </div>
@@ -3028,17 +3009,17 @@ export default function Management({ page }: { page: Page }) {
               }
             >
               <div className="form-grid">
-                <Field label="Supplier name" full>
+                <Field label={tr("Supplier name")} full>
                   <input
                     className="input"
                     name="name"
                     required
                     minLength={2}
                     maxLength={120}
-                    placeholder="Company or supplier name"
+                    placeholder={tr("Company or supplier name")}
                   />
                 </Field>
-                <Field label="Phone number">
+                <Field label={tr("Phone number")}>
                   <input
                     className="input"
                     name="phone"
@@ -3048,7 +3029,7 @@ export default function Management({ page }: { page: Page }) {
                     placeholder="077 123 4567"
                   />
                 </Field>
-                <Field label="Email (optional)">
+                <Field label={tr("Email (optional)")}>
                   <input
                     className="input"
                     name="email"
@@ -3091,7 +3072,7 @@ export default function Management({ page }: { page: Page }) {
               }
             >
               <div className="form-grid">
-                <Field label="Dish name" full>
+                <Field label={tr("Dish name")} full>
                   <input
                     className="input"
                     name="name"
@@ -3101,7 +3082,7 @@ export default function Management({ page }: { page: Page }) {
                     defaultValue={editingMenu?.name || ""}
                   />
                 </Field>
-                <Field label="Category">
+                <Field label={tr("Category")}>
                   <select
                     className="select"
                     name="categoryId"
@@ -3117,7 +3098,7 @@ export default function Management({ page }: { page: Page }) {
                     ))}
                   </select>
                 </Field>
-                <Field label="Stock tracking">
+                <Field label={tr("Stock tracking")}>
                   <select
                     className="select"
                     value={menuStockMode}
@@ -3127,12 +3108,12 @@ export default function Management({ page }: { page: Page }) {
                       )
                     }
                   >
-                    <option value="prepared">Prepared portions</option>
-                    <option value="recipe">Ingredients per order</option>
-                    <option value="untracked">No stock tracking</option>
+                    <option value="prepared">{tr("Prepared portions")}</option>
+                    <option value="recipe">{tr("Ingredients per order")}</option>
+                    <option value="untracked">{tr("No stock tracking")}</option>
                   </select>
                 </Field>
-                <Field label="Selling price (LKR)">
+                <Field label={tr("Selling price (LKR)")}>
                   <input
                     className="input"
                     name="price"
@@ -3143,7 +3124,7 @@ export default function Management({ page }: { page: Page }) {
                     defaultValue={editingMenu ? editingMenu.price / 100 : ""}
                   />
                 </Field>
-                <Field label="Reference product cost (LKR)">
+                <Field label={tr("Reference product cost (LKR)")}>
                   <input
                     className="input"
                     name="cost"
@@ -3154,7 +3135,7 @@ export default function Management({ page }: { page: Page }) {
                     defaultValue={editingMenu ? editingMenu.cost / 100 : "0"}
                   />
                 </Field>
-                <Field label="Preparation time (minutes)">
+                <Field label={tr("Preparation time (minutes)")}>
                   <input
                     className="input"
                     name="preparationMinutes"
@@ -3166,17 +3147,17 @@ export default function Management({ page }: { page: Page }) {
                     defaultValue={editingMenu?.preparationMinutes ?? 10}
                   />
                 </Field>
-                <Field label="Badge (optional)">
+                <Field label={tr("Badge (optional)")}>
                   <input
                     className="input"
                     name="badge"
                     maxLength={30}
                     defaultValue={editingMenu?.badge || ""}
-                    placeholder="e.g. Popular"
+                    placeholder={tr("e.g. Popular")}
                   />
                 </Field>
                 <PhotoPicker ref={photoPicker} value={menuPhoto} onChange={setMenuPhoto} onBusyChange={setMenuPhotoBusy} disabled={busy}/>
-                <Field label="Description" full>
+                <Field label={tr("Description")} full>
                   <textarea
                     className="input"
                     name="description"
@@ -3194,15 +3175,15 @@ export default function Management({ page }: { page: Page }) {
                         ?.enabled !== false
                     }
                   />
-                  <span>Enable this item on the menu</span>
+                  <span>{tr("Enable this item on the menu")}</span>
                 </label>
                 {menuStockMode !== "untracked" && (
                   <div className="form-info">
                     <BookOpen size={18} />
                     <span>
                       {menuStockMode === "prepared"
-                        ? "After saving, link prepared stock in Inventory and configure the recipe. Production consumes ingredients and adds prepared portions."
-                        : "After saving, configure the ingredients and quantities per portion. They will be deducted when an order is placed."}
+                        ? tr("After saving, link prepared stock in Inventory and configure the recipe. Production consumes ingredients and adds prepared portions.")
+                        : tr("After saving, configure the ingredients and quantities per portion. They will be deducted when an order is placed.")}
                     </span>
                   </div>
                 )}
@@ -3252,14 +3233,11 @@ export default function Management({ page }: { page: Page }) {
             >
               <div className="form-info">
                 <BookOpen size={18} />
-                <span>
-                  Enter the ingredients and packaging for your <strong>whole batch</strong>, then enter how many portions it makes.
-                  Quantities use each stock unit. The app calculates the cost and stock usage per portion. This recipe applies across branches.
-                </span>
+                <span>{tr("Enter the ingredients and packaging for your")} <strong>{tr("whole batch")}</strong>{tr(", then enter how many portions it makes. Quantities use each stock unit. The app calculates the cost and stock usage per portion. This recipe applies across branches.")}</span>
               </div>
               <div className="form-grid">
-                <Field label="Recipe yield (portions)" full>
-                  <input className="input" aria-label="Recipe yield (portions)" type="number" min="1" max="100000" step="0.01" required value={recipeYield} onChange={event => setRecipeYield(event.target.value)} />
+                <Field label={tr("Recipe yield (portions)")} full>
+                  <input className="input" aria-label={tr("Recipe yield (portions)")} type="number" min="1" max="100000" step="0.01" required value={recipeYield} onChange={event => setRecipeYield(event.target.value)} />
                 </Field>
               </div>
               <div className="recipe-form-lines">
@@ -3269,7 +3247,7 @@ export default function Management({ page }: { page: Page }) {
                   );
                   return (
                     <div key={index}>
-                      <Field label="Ingredient / packaging">
+                      <Field label={tr("Ingredient / packaging")}>
                         <select
                           className="select"
                           required
@@ -3284,7 +3262,7 @@ export default function Management({ page }: { page: Page }) {
                             )
                           }
                         >
-                          <option value="">Select ingredient or packaging</option>
+                          <option value="">{tr("Select ingredient or packaging")}</option>
                           {ingredients.map((item) => (
                             <option key={item.id} value={ingredientKey(item)}>
                               {item.name} ({item.unit})
@@ -3292,12 +3270,11 @@ export default function Management({ page }: { page: Page }) {
                           ))}
                           {line.key && !item && (
                             <option value={line.key}>
-                              {line.key} · unavailable in this branch
-                            </option>
+                              {line.key} {tr("· unavailable in this branch")}</option>
                           )}
                         </select>
                       </Field>
-                      <Field label={`Batch quantity${item ? ` (${line.unit??item.unit})` : ""}`}>
+                      <Field label={tr("Batch quantity{0}", item ? ` (${line.unit??item.unit})` : "")}>
                         <input
                           className="input"
                           type="number"
@@ -3316,12 +3293,12 @@ export default function Management({ page }: { page: Page }) {
                             )
                           }
                         />
-                        {item&&<select className="select" aria-label={`Quantity unit ${index+1}`} value={line.unit??item.unit} onChange={event=>{const unit=event.target.value;setRecipeLines(previous=>previous.map((row,i)=>i===index?{...row,unit,quantity:row.quantity&&Number(row.quantity)>=0?String(convertQuantity(Number(row.quantity),row.unit??item.unit,unit)):''}:row));}}>{compatibleUnits(item.unit).map(unit=><option key={unit} value={unit}>{unit}</option>)}</select>}
+                        {item&&<select className="select" aria-label={tr("Quantity unit {0}", index+1)} value={line.unit??item.unit} onChange={event=>{const unit=event.target.value;setRecipeLines(previous=>previous.map((row,i)=>i===index?{...row,unit,quantity:row.quantity&&Number(row.quantity)>=0?String(convertQuantity(Number(row.quantity),row.unit??item.unit,unit)):''}:row));}}>{compatibleUnits(item.unit).map(unit=><option key={unit} value={unit}>{unit}</option>)}</select>}
                       </Field>
                       <button
                         className="icon-button"
                         type="button"
-                        aria-label="Remove ingredient"
+                        aria-label={tr("Remove ingredient")}
                         disabled={recipeLines.length === 1}
                         onClick={() =>
                           setRecipeLines(
@@ -3343,25 +3320,18 @@ export default function Management({ page }: { page: Page }) {
                     setRecipeLines([...recipeLines, { key: "", quantity: "" }])
                   }
                 >
-                  <Plus size={14} />
-                  Add ingredient / packaging
-                </button>
-                <span>
-                  Total batch cost
-                  <strong>
+                  <Plus size={14} />{tr("Add ingredient / packaging")}</button>
+                <span>{tr("Total batch cost")}<strong>
                     {money(recipeBatchCost)}
                   </strong>
                 </span>
               </div>
               <div className="purchase-form-bottom">
-                <span>Cost per portion<strong>{money(recipePortionCost)}</strong></span>
-                <span>Selling price<strong>{money(editingMenu.price)}</strong></span>
-                <span>Gross profit / portion<strong>{money(editingMenu.price - recipePortionCost)}</strong></span>
+                <span>{tr("Cost per portion")}<strong>{money(recipePortionCost)}</strong></span>
+                <span>{tr("Selling price")}<strong>{money(editingMenu.price)}</strong></span>
+                <span>{tr("Gross profit / portion")}<strong>{money(editingMenu.price - recipePortionCost)}</strong></span>
               </div>
-              <p className="recipe-help">
-                Example: 20 kg rice for 50 parcels = 0.4 kg per portion. Include oil, spices and containers as stock ingredients or packaging.
-                Direct ingredient and packaging costs appear here; record wages, rent and utilities as expenses.
-              </p>
+              <p className="recipe-help">{tr("Example: 20 kg rice for 50 parcels = 0.4 kg per portion. Include oil, spices and containers as stock ingredients or packaging. Direct ingredient and packaging costs appear here; record wages, rent and utilities as expenses.")}</p>
               {footer("Save recipe")}
             </form>
           )}
@@ -3387,7 +3357,7 @@ export default function Management({ page }: { page: Page }) {
               }
             >
               <div className="form-grid">
-                <Field label={"Stock item"} full>
+                <Field label={tr("Stock item")} full>
                   <select
                     className="select"
                     required
@@ -3401,7 +3371,7 @@ export default function Management({ page }: { page: Page }) {
                       )
                     }
                   >
-                    <option value="">{"Select an item"}</option>
+                    <option value="">{tr("Select an item")}</option>
                     {inventory.map((item) => (
                       <option key={item.id} value={item.id}>
                         {label(item)} · {number(item.quantity)} {item.unit}
@@ -3412,28 +3382,28 @@ export default function Management({ page }: { page: Page }) {
                 {selectedItem && (
                   <div className="form-info">
                     <Package size={18} />
-                    {"Current stock"}:{" "}
+                    {tr("Current stock")}:{" "}
                     <strong>
                       {number(selectedItem.quantity)} {selectedItem.unit}
                     </strong>
                   </div>
                 )}
-                <Field label={"Quantity change (+ add / − remove)"} full>
+                <Field label={tr("Quantity change (+ add / − remove)")} full>
                   <input
                     className="input"
                     type="number"
                     name="quantity"
                     step="0.001"
                     required
-                    placeholder="e.g. 5 or -2"
+                    placeholder={tr("e.g. 5 or -2")}
                   />
                   <small className="field-hint">
                     {
-                      "Enter the amount to add or remove, not the final stock balance."
+                      tr("Enter the amount to add or remove, not the final stock balance.")
                     }
                   </small>
                 </Field>
-                <Field label={"Reason"} full>
+                <Field label={tr("Reason")} full>
                   <textarea
                     className="input"
                     name="reason"
@@ -3441,7 +3411,7 @@ export default function Management({ page }: { page: Page }) {
                     minLength={3}
                     maxLength={300}
                     rows={3}
-                    placeholder={"Stock count correction, spoilage, waste…"}
+                    placeholder={tr("Stock count correction, spoilage, waste…")}
                   />
                 </Field>
               </div>
@@ -3466,7 +3436,7 @@ export default function Management({ page }: { page: Page }) {
               }
             >
               <div className="form-grid">
-                <Field label={"Prepared menu item"} full>
+                <Field label={tr("Prepared menu item")} full>
                   <select
                     className="select"
                     name="menuItemId"
@@ -3476,7 +3446,7 @@ export default function Management({ page }: { page: Page }) {
                       setProductionMenuId(event.target.value)
                     }
                   >
-                    <option value="">{"Select a dish"}</option>
+                    <option value="">{tr("Select a dish")}</option>
                     {preparedMenu.map((item) => (
                       <option value={item.id} key={item.id}>
                         {label(item)}
@@ -3484,7 +3454,7 @@ export default function Management({ page }: { page: Page }) {
                     ))}
                   </select>
                 </Field>
-                <Field label={"Portions prepared"} full>
+                <Field label={tr("Portions prepared")} full>
                   <input
                     className="input"
                     name="quantity"
@@ -3503,23 +3473,23 @@ export default function Management({ page }: { page: Page }) {
                   <Flame size={18} />
                   <span>
                     {
-                      "Prepared stock increases and recipe ingredients are deducted together, in one transaction."
+                      tr("Prepared stock increases and recipe ingredients are deducted together, in one transaction.")
                     }
                   </span>
                 </div>
-                <Field label={"Batch note (optional)"} full>
+                <Field label={tr("Batch note (optional)")} full>
                   <textarea
                     className="input"
                     name="note"
                     maxLength={300}
                     rows={3}
-                    placeholder={"Morning preparation, lunch service…"}
+                    placeholder={tr("Morning preparation, lunch service…")}
                   />
                 </Field>
               </div>
               {!preparedMenu.length && (
                 <div className="inline-warning">
-                  {"No prepared-stock menu items are configured."}
+                  {tr("No prepared-stock menu items are configured.")}
                 </div>
               )}
               {footer("Record production")}
@@ -3559,14 +3529,14 @@ export default function Management({ page }: { page: Page }) {
               }
             >
               <div className="form-grid">
-                <Field label={"Supplier"}>
+                <Field label={tr("Supplier")}>
                   <select
                     className="select"
                     name="supplierId"
                     required
                     defaultValue=""
                   >
-                    <option value="">{"Select supplier"}</option>
+                    <option value="">{tr("Select supplier")}</option>
                     {data.suppliers.map((supplier) => (
                       <option key={supplier.id} value={supplier.id}>
                         {supplier.name}
@@ -3574,24 +3544,24 @@ export default function Management({ page }: { page: Page }) {
                     ))}
                   </select>
                 </Field>
-                <Field label={"Invoice number"}>
+                <Field label={tr("Invoice number")}>
                   <input
                     className="input"
                     name="invoiceNumber"
                     required
                     maxLength={100}
-                    placeholder="INV-0001"
+                    placeholder={tr("INV-0001")}
                   />
                 </Field>
               </div>
               <div className="purchase-line-heading">
-                <h3>{"Received items"}</h3>
-                <span>{"Prices in LKR"}</span>
+                <h3>{tr("Received items")}</h3>
+                <span>{tr("Prices in LKR")}</span>
               </div>
               <div className="purchase-form-lines">
                 {purchaseLines.map((line, index) => (
                   <div key={index}>
-                    <Field label={"Item"}>
+                    <Field label={tr("Item")}>
                       <select
                         className="select"
                         required
@@ -3615,7 +3585,7 @@ export default function Management({ page }: { page: Page }) {
                           );
                         }}
                       >
-                        <option value="">{"Select item"}</option>
+                        <option value="">{tr("Select item")}</option>
                         {inventory.map((item) => (
                           <option key={item.id} value={item.id}>
                             {label(item)} ({item.unit})
@@ -3623,7 +3593,7 @@ export default function Management({ page }: { page: Page }) {
                         ))}
                       </select>
                     </Field>
-                    <Field label={"Quantity"}>
+                    <Field label={tr("Quantity")}>
                       <input
                         className="input"
                         type="number"
@@ -3642,7 +3612,7 @@ export default function Management({ page }: { page: Page }) {
                         }
                       />
                     </Field>
-                    <Field label={"Unit price"}>
+                    <Field label={tr("Unit price")}>
                       <input
                         className="input"
                         type="number"
@@ -3664,7 +3634,7 @@ export default function Management({ page }: { page: Page }) {
                     <button
                       className="icon-button"
                       type="button"
-                      aria-label={"Remove item"}
+                      aria-label={tr("Remove item")}
                       disabled={purchaseLines.length <= 1}
                       onClick={() =>
                         setPurchaseLines(
@@ -3689,10 +3659,10 @@ export default function Management({ page }: { page: Page }) {
                   }
                 >
                   <Plus size={14} />
-                  {"Add line"}
+                  {tr("Add line")}
                 </button>
                 <span>
-                  {"Total"}
+                  {tr("Total")}
                   <strong>
                     {money(
                       Math.round(
@@ -3728,7 +3698,7 @@ export default function Management({ page }: { page: Page }) {
               }
             >
               <div className="form-grid">
-                <Field label={"Full name"} full>
+                <Field label={tr("Full name")} full>
                   <input
                     className="input"
                     required
@@ -3736,10 +3706,10 @@ export default function Management({ page }: { page: Page }) {
                     minLength={2}
                     maxLength={100}
                     autoComplete="name"
-                    placeholder={"Guest name"}
+                    placeholder={tr("Guest name")}
                   />
                 </Field>
-                <Field label={"Phone number"}>
+                <Field label={tr("Phone number")}>
                   <input
                     className="input"
                     name="phone"
@@ -3750,7 +3720,7 @@ export default function Management({ page }: { page: Page }) {
                     placeholder="077 123 4567"
                   />
                 </Field>
-                <Field label={"Email (optional)"}>
+                <Field label={tr("Email (optional)")}>
                   <input
                     className="input"
                     name="email"
@@ -3782,7 +3752,7 @@ export default function Management({ page }: { page: Page }) {
               }
             >
               <div className="form-grid">
-                <Field label={"Full name"} full>
+                <Field label={tr("Full name")} full>
                   <input
                     className="input"
                     name="name"
@@ -3791,7 +3761,7 @@ export default function Management({ page }: { page: Page }) {
                     maxLength={100}
                   />
                 </Field>
-                <Field label={"Role"}>
+                <Field label={tr("Role")}>
                   <select
                     className="select"
                     name="role"
@@ -3813,7 +3783,7 @@ export default function Management({ page }: { page: Page }) {
                     ))}
                   </select>
                 </Field>
-                <Field label={"Phone number"}>
+                <Field label={tr("Phone number")}>
                   <input
                     className="input"
                     name="phone"
@@ -3821,7 +3791,7 @@ export default function Management({ page }: { page: Page }) {
                     maxLength={20}
                   />
                 </Field>
-                <Field label={"Sign-in PIN (4–8 digits)"} full>
+                <Field label={tr("Sign-in PIN (4–8 digits)")} full>
                   <input
                     className="input"
                     name="pin"
@@ -3835,7 +3805,7 @@ export default function Management({ page }: { page: Page }) {
                   />
                   <small className="field-hint">
                     {
-                      "Give this PIN privately to the team member. PINs are stored as secure hashes."
+                      tr("Give this PIN privately to the team member. PINs are stored as secure hashes.")
                     }
                   </small>
                 </Field>
@@ -3862,17 +3832,17 @@ export default function Management({ page }: { page: Page }) {
               }
             >
               <div className="form-grid">
-                <Field label={"Description"} full>
+                <Field label={tr("Description")} full>
                   <input
                     className="input"
                     name="description"
                     required
                     minLength={3}
                     maxLength={200}
-                    placeholder={"What was this expense for?"}
+                    placeholder={tr("What was this expense for?")}
                   />
                 </Field>
-                <Field label={"Category"}>
+                <Field label={tr("Category")}>
                   <select className="select" name="category" required>
                     {[
                       ["utilities", "Utilities", ""],
@@ -3888,7 +3858,7 @@ export default function Management({ page }: { page: Page }) {
                     ))}
                   </select>
                 </Field>
-                <Field label={"Amount (LKR)"}>
+                <Field label={tr("Amount (LKR)")}>
                   <input
                     className="input"
                     name="amount"
@@ -3898,13 +3868,13 @@ export default function Management({ page }: { page: Page }) {
                     required
                   />
                 </Field>
-                <Field label={"Payment method"} full>
+                <Field label={tr("Payment method")} full>
                   <select className="select" name="paymentMethod">
                     <option value="cash">
-                      {"Cash — deducted from open drawer"}
+                      {tr("Cash — deducted from open drawer")}
                     </option>
-                    <option value="bank">{"Bank transfer"}</option>
-                    <option value="card">{"Card"}</option>
+                    <option value="bank">{tr("Bank transfer")}</option>
+                    <option value="card">{tr("Card")}</option>
                   </select>
                 </Field>
               </div>
@@ -3931,11 +3901,11 @@ export default function Management({ page }: { page: Page }) {
                   <Banknote size={20} />
                   <span>
                     {
-                      "Count the cash in your drawer before opening the shift. This becomes your opening float."
+                      tr("Count the cash in your drawer before opening the shift. This becomes your opening float.")
                     }
                   </span>
                 </div>
-                <Field label={"Opening float (LKR)"} full>
+                <Field label={tr("Opening float (LKR)")} full>
                   <input
                     className="input"
                     type="number"
@@ -3965,12 +3935,12 @@ export default function Management({ page }: { page: Page }) {
               }
             >
               <div className="shift-reconcile">
-                <span>{"Expected drawer cash"}</span>
+                <span>{tr("Expected drawer cash")}</span>
                 <strong>{money(selectedShift.expectedCash)}</strong>
-                <small>{"Opening float + cash payments − cash expenses"}</small>
+                <small>{tr("Opening float + cash payments − cash expenses")}</small>
               </div>
               <div className="form-grid">
-                <Field label={"Counted cash (LKR)"} full>
+                <Field label={tr("Counted cash (LKR)")} full>
                   <input
                     className="input"
                     type="number"
@@ -3982,7 +3952,7 @@ export default function Management({ page }: { page: Page }) {
                   />
                   <small className="field-hint">
                     {
-                      "Enter the actual cash in your drawer. Any difference will be recorded for review."
+                      tr("Enter the actual cash in your drawer. Any difference will be recorded for review.")
                     }
                   </small>
                 </Field>
@@ -4006,11 +3976,11 @@ export default function Management({ page }: { page: Page }) {
                   <small>
                     {selectedCustomer.phone ||
                       selectedCustomer.email ||
-                      "Registered customer"}
+                      tr("Registered customer")}
                   </small>
                 </div>
                 <div>
-                  <span>Branch dues</span>
+                  <span>{tr("Branch dues")}</span>
                   <strong
                     className={
                       selectedCustomer.balance > 0 ? "text-amber" : "text-mint"
@@ -4045,12 +4015,10 @@ export default function Management({ page }: { page: Page }) {
                     )
                   }
                 >
-                  <h3>Record a collection</h3>
-                  <p>
-                    Enter only the amount received now. The remaining loan stays on this customer’s account.
-                  </p>
+                  <h3>{tr("Record a collection")}</h3>
+                  <p>{tr("Enter only the amount received now. The remaining loan stays on this customer’s account.")}</p>
                   <div className="form-grid">
-                    <Field label="Amount received (LKR)">
+                    <Field label={tr("Amount received (LKR)")}>
                       <input
                         className="input"
                         name="amount"
@@ -4061,11 +4029,11 @@ export default function Management({ page }: { page: Page }) {
                         required
                         value={collectionAmount}
                         disabled={busy}
-                        placeholder="Enter amount received"
+                        placeholder={tr("Enter amount received")}
                         onChange={event=>setCollectionAmount(event.target.value)}
                       />
                     </Field>
-                    <Field label="Payment method">
+                    <Field label={tr("Payment method")}>
                       <select
                         className="select"
                         name="method"
@@ -4073,55 +4041,54 @@ export default function Management({ page }: { page: Page }) {
                         disabled={busy}
                         onChange={event=>setCollectionMethod(event.target.value)}
                       >
-                        <option value="cash" disabled={!activeShift}>
-                          Cash{!activeShift ? " — open a cash shift first" : ""}
+                        <option value="cash" disabled={!activeShift}>{tr("Cash")}{!activeShift ? tr("— open a cash shift first") : ""}
                         </option>
-                        <option value="card">Card</option>
-                        <option value="qr">QR / bank payment</option>
+                        <option value="card">{tr("Card")}</option>
+                        <option value="qr">{tr("QR / bank payment")}</option>
                       </select>
                     </Field>
-                    <Field label={collectionMethod==='cash'?'Reference (optional)':'Approved payment reference'}>
+                    <Field label={collectionMethod==='cash'?tr("Reference (optional)"):tr("Approved payment reference")}>
                       <input
                         className="input"
                         name="reference"
                         required={collectionMethod!=='cash'}
                         disabled={busy}
                         maxLength={120}
-                        placeholder="Bank or card reference"
+                        placeholder={tr("Bank or card reference")}
                       />
                     </Field>
-                    <Field label="Note (optional)">
+                    <Field label={tr("Note (optional)")}>
                       <input
                         className="input"
                         name="note"
                         maxLength={300}
-                        placeholder="Payment note"
+                        placeholder={tr("Payment note")}
                       />
                     </Field>
                   </div>
-                  <div className="collection-preview" aria-label="Repayment preview" role="status">
-                    <div><span>Current loan</span><strong>{money(selectedCustomer.balance)}</strong></div>
-                    <div><span>Receiving now</span><strong>{money(validCollection ? collectionMinor : 0)}</strong></div>
-                    <div><span>Remaining loan after payment</span><strong className={validCollection && collectionMinor === selectedCustomer.balance ? 'text-mint' : 'text-amber'}>{money(selectedCustomer.balance - (validCollection ? collectionMinor : 0))}</strong></div>
+                  <div className="collection-preview" aria-label={tr("Repayment preview")} role="status">
+                    <div><span>{tr("Current loan")}</span><strong>{money(selectedCustomer.balance)}</strong></div>
+                    <div><span>{tr("Receiving now")}</span><strong>{money(validCollection ? collectionMinor : 0)}</strong></div>
+                    <div><span>{tr("Remaining loan after payment")}</span><strong className={validCollection && collectionMinor === selectedCustomer.balance ? 'text-mint' : 'text-amber'}>{money(selectedCustomer.balance - (validCollection ? collectionMinor : 0))}</strong></div>
                   </div>
                   <div className="form-error" role="alert">
                     {error}
                   </div>
                   <div className="form-actions">
-                    <button className="button button-ghost" type="button" disabled={busy} onClick={()=>setCollectionAmount((selectedCustomer.balance/100).toFixed(2))}>Pay in full</button>
+                    <button className="button button-ghost" type="button" disabled={busy} onClick={()=>setCollectionAmount((selectedCustomer.balance/100).toFixed(2))}>{tr("Pay in full")}</button>
                     <button
                       className="button button-primary"
                       type="submit"
                       disabled={busy || !validCollection}
                     >
                       <Check size={15} />
-                      {busy ? "Recording…" : "Record collection"}
+                      {busy ? tr("Recording…") : tr("Record collection")}
                     </button>
                   </div>
                 </form>
               )}
               <div className="customer-ledger-heading">
-                <h3>Account history</h3>
+                <h3>{tr("Account history")}</h3>
                 <button
                   className="button button-ghost button-small"
                   onClick={() =>
@@ -4153,18 +4120,16 @@ export default function Management({ page }: { page: Page }) {
                     )
                   }
                 >
-                  <Download size={13} />
-                  Export ledger
-                </button>
+                  <Download size={13} />{tr("Export ledger")}</button>
               </div>
               <div className="table-scroll customer-ledger-table">
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th>Date</th>
-                      <th>Transaction</th>
-                      <th>Reference</th>
-                      <th>Amount</th>
+                      <th>{tr("Date")}</th>
+                      <th>{tr("Transaction")}</th>
+                      <th>{tr("Reference")}</th>
+                      <th>{tr("Amount")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -4177,13 +4142,13 @@ export default function Management({ page }: { page: Page }) {
                               tone={entry.type === "sale" ? "amber" : "green"}
                             >
                               {entry.type === "sale"
-                                ? "Credit sale"
+                                ? tr("Credit sale")
                                 : entry.type === "collection"
-                                  ? "Payment received"
-                                  : "Credit refund"}
+                                  ? tr("Payment received")
+                                  : tr("Credit refund")}
                             </Pill>
                             <small>{entry.note || entry.method}</small>
-                            {entry.type==='sale'&&entry.orderId&&<small className="customer-credit-items">Bill items: {data.orders.find(order=>order.id===entry.orderId)?.lines.map(line=>`${line.name} × ${line.quantity} (${money(line.lineTotal)})`).join(' · ')||'Historical bill details unavailable'}</small>}
+                            {entry.type==='sale'&&entry.orderId&&<small className="customer-credit-items">{tr("Bill items:")} {data.orders.find(order=>order.id===entry.orderId)?.lines.map(line=>`${line.name} × ${line.quantity} (${money(line.lineTotal)})`).join(' · ')||tr("Historical bill details unavailable")}</small>}
                           </div>
                         </td>
                         <td>
@@ -4191,7 +4156,7 @@ export default function Management({ page }: { page: Page }) {
                             (entry.orderId
                               ? data.orders.find(
                                   (order) => order.id === entry.orderId,
-                                )?.number || "Order"
+                                )?.number || tr("Order")
                               : "—")}
                         </td>
                         <td
@@ -4208,14 +4173,13 @@ export default function Management({ page }: { page: Page }) {
                 </table>
                 {!customerEntries.length && (
                   <Empty
-                    title="No credit transactions"
-                    subtitle="Credit sales and customer collections will appear here."
+                    title={tr("No credit transactions")}
+                    subtitle={tr("Credit sales and customer collections will appear here.")}
                   />
                 )}
               </div>
               <div className="customer-ledger-footer">
-                <ShieldCheck size={13} />
-                This ledger and balance belong to {data.branch.name}.
+                <ShieldCheck size={13} />{tr("This ledger and balance belong to")} {data.branch.name}.
               </div>
             </>
           )}
