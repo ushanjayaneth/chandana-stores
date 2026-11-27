@@ -19,7 +19,7 @@ import { productCost, weightedUnitCost } from '../shared/costing';
 import { productStockState } from '../shared/stock';
 import {registerStaffRoutes} from './staff';
 import {createMonitorHandler,type MonitorOptions} from './monitor/handler';
-import {downloadRetailerPhoto, findProductPhotos} from './product-photos.js';
+import {downloadCataloguePhoto, findProductPhotos} from './product-photos.js';
 
 const command = z.string().min(8).max(160);
 const id = z.string().min(1).max(160);
@@ -150,7 +150,7 @@ export async function createApp(options: AppOptions = {}) {
     const {q, barcode, image} = request.query;
     try {
       if (typeof image === "string") {
-        const photo = await downloadRetailerPhoto(image);
+        const photo = await downloadCataloguePhoto(image);
         if (!photo) return reply.code(404).send({error: "Photo unavailable"});
         return reply.header("X-Content-Type-Options", "nosniff").type(photo.mime).send(photo.bytes);
       }

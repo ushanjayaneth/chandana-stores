@@ -2,7 +2,7 @@ import {useTranslation} from "../lib/language";
 import {lazy, Suspense, useEffect, useId, useImperativeHandle, useRef, useState, type Ref} from 'react';
 import {Camera, ImagePlus, Link, Search, Upload, X} from 'lucide-react';
 import {isProductImageReference, mediaIdFromReference} from '../../shared/media';
-import {bundledCatalogPhotos, catalogImageUrl, isOnlineCatalogPhoto, matchingCatalogPhotos, photoBarcode, photoQuery, type CatalogPhoto} from '../../shared/product-photo-catalog';
+import {bundledCatalogPhotos, catalogImageUrl, isOnlineCatalogPhoto, matchingCatalogPhotos, photoBarcode, photoQuery, photoSearchTimeoutMs, type CatalogPhoto} from '../../shared/product-photo-catalog';
 import {compressFile} from '../lib/media';
 import {isDeviceWorkspace} from '../lib/workspace-mode';
 import {sharedCloudSource} from '../lib/cloud-shared';
@@ -36,6 +36,7 @@ export function PhotoPicker({ref, value, onChange, onBusyChange, disabled = fals
   const searchKey = JSON.stringify([query, barcode]);
   const suggestedPhoto = !value && dismissed !== searchKey && suggestion?.key === searchKey ? suggestion.photo : null;
   const preview = value || suggestedPhoto?.image || "";
+  const previewPhoto = selectedPhoto ?? suggestedPhoto;
   const address = selectedPhoto?.image ?? (uploadedReference(value) ? '' : value);
 
   useEffect(() => {
@@ -65,14 +66,14 @@ export function PhotoPicker({ref, value, onChange, onBusyChange, disabled = fals
       const params = new URLSearchParams({q: query, barcode});
       let onlinePhotos: CatalogPhoto[] = [];
       try {
-        const response = await fetch("/api/product-photos?" + params, {signal: AbortSignal.any([controller.signal, AbortSignal.timeout(11_000)])});
+        const response = await fetch("/api/product-photos?" + params, {signal: AbortSignal.any([controller.signal, AbortSignal.timeout(photoSearchTimeoutMs)])});
         if (response.ok) {
           const data = await response.json();
           if (Array.isArray(data.photos)) onlinePhotos = data.photos.filter(isOnlineCatalogPhoto);
         }
       } catch { /* Manual search is available and the product form stays usable. */ }
       if (controller.signal.aborted) return;
-      const first = matchingCatalogPhotos([...bundled, ...onlinePhotos], query, barcode)[0];
+      const first = matchingCatalogPhotos([...bundled, ...onlinePhotos.filter(photo => !photo.related)], query, barcode)[0];
       setSuggestion(first ? {key: searchKey, photo: first} : null);
     }, 850);
     return () => {window.clearTimeout(timer); controller.abort();};
@@ -92,7 +93,7 @@ export function PhotoPicker({ref, value, onChange, onBusyChange, disabled = fals
   }
   async function saveCataloguePhoto(photo: CatalogPhoto) {
     if (mediaIdFromReference(photo.image)) return photo.image;
-    const url = photo.retailer ? '/api/product-photos?' + new URLSearchParams({image: photo.image})
+    const url = photo.retailer || photo.commonsPageId ? '/api/product-photos?' + new URLSearchParams({image: photo.image})
       : photo.credit ? catalogImageUrl(photo.image, photo.credit.catalog) : photo.image;
     if (!url) throw new Error(tr("This photo source is unavailable."));
     const response = await fetch(url, {signal: AbortSignal.timeout(10_000), referrerPolicy: "no-referrer"});
@@ -128,7 +129,7 @@ export function PhotoPicker({ref, value, onChange, onBusyChange, disabled = fals
   return <div ref={picker} className="photo-picker product-field-full">
     <div className="photo-picker-heading"><span>{tr("Product photo")}</span><small>{tr("Camera, file or image link")}</small></div>
     <div className="photo-picker-content">
-      <div className="photo-picker-preview">{preview && isProductImageReference(preview) ? <ProductPhoto src={preview} alt={tr("Product photo preview")} showCredit referrerPolicy="no-referrer" onError={() => {if (suggestedPhoto) setDismissed(searchKey);}} /> : <ImagePlus size={28} />}</div>
+      <div className="photo-picker-preview">{preview && isProductImageReference(preview) ? <ProductPhoto src={preview} alt={tr("Product photo preview")} showCredit referrerPolicy="no-referrer" fallbackSrc={previewPhoto?.retailer || previewPhoto?.commonsPageId ? '/api/product-photos?' + new URLSearchParams({image: preview}) : undefined} onError={() => {if (suggestedPhoto) setDismissed(searchKey);}} /> : <ImagePlus size={28} />}</div>
       <div className="photo-picker-controls">
         <label className="photo-picker-link" htmlFor={`${id}-url`}><Link size={14} /><input id={`${id}-url`} className="input" aria-label={tr("Photo URL")} type="text" maxLength={500} placeholder="https://example.com/photo.jpg" value={address} disabled={disabled || busy} onChange={event => {setSelectedPhoto(null); onChange(event.target.value); setError('');}} /></label>
         <div className="photo-picker-buttons"><button type="button" className="button button-ghost" disabled={disabled || busy} onClick={() => camera.current?.click()}><Camera size={14} />{tr("Take photo")}</button><button type="button" className="button button-ghost" disabled={disabled || busy} onClick={() => input.current?.click()}><Upload size={14} />{busy ? tr("Preparing photo…") : tr("Choose photo")}</button>

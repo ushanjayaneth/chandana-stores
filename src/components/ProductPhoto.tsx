@@ -52,8 +52,9 @@ async function photoSource(id: string, sourceId: string | null, retry = false): 
 }
 
 /** Uploaded images stay available from the device database while offline. */
-export function ProductPhoto({src = '', alt = '', showCredit = false, ...props}: ImgHTMLAttributes<HTMLImageElement> & {showCredit?: boolean}) {
+export function ProductPhoto({src = '', alt = '', showCredit = false, fallbackSrc, onError, ...props}: ImgHTMLAttributes<HTMLImageElement> & {showCredit?: boolean; fallbackSrc?: string}) {
   const tr = useTranslation();
+  const [failedSource, setFailedSource] = useState('');
   const id = mediaIdFromReference(src);
   const sourceId = sharedCloudSource();
   const local = Boolean(id && (sourceId || src.startsWith('local-image:') || isDeviceWorkspace()));
@@ -89,7 +90,11 @@ export function ProductPhoto({src = '', alt = '', showCredit = false, ...props}:
   const catalog = credit && photoCatalogs[credit.catalog];
   const attribution = catalog ? "Photo by " + catalog.name + " contributors, CC BY-SA 3.0, resized" : undefined;
   return <>
-    <img {...props} src={url} alt={alt} title={props.title ?? attribution} />
+    <img {...props} src={fallbackSrc && failedSource === url ? fallbackSrc : url} alt={alt} title={props.title ?? attribution}
+      onError={event => {
+        if (fallbackSrc && failedSource !== url) setFailedSource(url);
+        else onError?.(event);
+      }} />
     {showCredit && credit && catalog && <a className="product-photo-attribution" title={attribution}
       href={catalog.site + "/product/" + credit.barcode} target="_blank" rel="noreferrer">{tr("Photo credit")}</a>}
   </>;

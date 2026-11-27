@@ -9,7 +9,7 @@ test('product photo finder recognizes Sunlight, keeps the product draft and save
   const remoteImage = 'https://images.openproductsfacts.org/images/products/123/456/789/0123/front_en.1.400.jpg';
   const retailerImage = 'https://hemasestore.com/wp-content/uploads/2026/02/Fresh-Mint-30g.webp';
   const raster = readFileSync('public/images/grocery/soap.jpg');
-  await page.route('**/api/product-photos?*', async route => {
+  await context.route('**/api/product-photos?*', async route => {
     const params = new URL(route.request().url()).searchParams;
     if (params.get('image') === retailerImage) return route.fulfill({body: raster, contentType: 'image/jpeg'});
     const query = params.get('q');
@@ -22,16 +22,19 @@ test('product photo finder recognizes Sunlight, keeps the product draft and save
         {name: 'Clogard Mini Toothpaste', brand: 'Clogard', image: remoteImage, credit: {catalog: 'products', barcode: '1234567890123'}},
       ]}});
     }
+    if (query === 'chocolate biscuit') return route.fulfill({json: {photos: [
+      {name: 'Chocolate Biscuits', image: remoteImage, credit: {catalog: 'products', barcode: '1234567890123'}},
+    ]}});
     expect(query).toBe('sunlight');
     await route.fulfill({json: {photos: [
       {name: 'Sunlight Washing Powder', brand: 'Sunlight', size: '500 g', image: remoteImage, credit: {catalog: 'products', barcode: '1234567890123'}},
       {name: 'Sun in the sky', image: remoteImage, credit: {catalog: 'products', barcode: '1234567890123'}},
     ]}});
   });
-  await page.route(remoteImage, route => route.fulfill({
+  await context.route(remoteImage, route => route.fulfill({
     status: 200, headers: {'Access-Control-Allow-Origin': '*'}, contentType: 'image/jpeg', body: raster,
   }));
-  await page.route(retailerImage, route => route.fulfill({body: raster, contentType: 'image/jpeg'}));
+  await context.route(retailerImage, route => route.fulfill({status: 403}));
   await page.goto('/?local=1');
   await page.getByRole('button', {name: 'Create your store', exact: true}).click();
   const setup = page.getByRole('dialog', {name: 'Set up this device', exact: true});
@@ -79,9 +82,22 @@ test('product photo finder recognizes Sunlight, keeps the product draft and save
   await expect(gallery.getByText('Related pack sizes')).toBeVisible();
   await gallery.getByRole('button', {name: /Use photo of Clogard Fresh Mint Gel 30G/}).click();
   await expect(product.getByLabel('Photo URL')).toHaveValue(retailerImage);
-  await expect(preview).toHaveAttribute('src', retailerImage);
+  await expect.poll(() => preview.evaluate(img => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  await expect(preview).toHaveAttribute('src', /api\/product-photos[?]image=/);
   await product.getByLabel('Selling price (LKR)', {exact: true}).fill('110');
   await product.getByLabel('Opening stock quantity', {exact: true}).fill('4');
+  await product.getByRole('button', {name: 'Add product', exact: true}).click();
+  await expect(product).toHaveCount(0);
+  await page.getByRole('button', {name: 'Add product', exact: true}).click();
+  await product.getByLabel('Product name', {exact: true}).fill('choclat biscut');
+  await find.click();
+  const biscuit = gallery.getByRole('button', {name: /Use photo of Chocolate Biscuits/});
+  await expect(biscuit).toBeVisible();
+  await expect.poll(() => biscuit.locator('img').evaluate(img => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  await biscuit.click();
+  await expect(product.getByLabel('Photo URL')).toHaveValue(remoteImage);
+  await product.getByLabel('Selling price (LKR)', {exact: true}).fill('90');
+  await product.getByLabel('Opening stock quantity', {exact: true}).fill('8');
   await product.getByRole('button', {name: 'Add product', exact: true}).click();
   await expect(product).toHaveCount(0);
   await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));

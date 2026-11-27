@@ -1,5 +1,5 @@
 import type {IncomingMessage, ServerResponse} from 'node:http';
-import {downloadRetailerPhoto, findProductPhotos} from '../server/product-photos.js';
+import {downloadCataloguePhoto, findProductPhotos} from '../server/product-photos.js';
 
 export default async function productPhotos(request: IncomingMessage, response: ServerResponse) {
   response.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -13,7 +13,7 @@ export default async function productPhotos(request: IncomingMessage, response: 
   try {
     const image = params.get('image');
     if (image !== null) {
-      const photo = await downloadRetailerPhoto(image);
+      const photo = await downloadCataloguePhoto(image);
       if (!photo) { response.writeHead(404); response.end(JSON.stringify({error: 'Photo unavailable'})); return; }
       response.setHeader('Content-Type', photo.mime);
       response.setHeader('X-Content-Type-Options', 'nosniff');
