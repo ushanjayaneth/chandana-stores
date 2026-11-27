@@ -1,5 +1,5 @@
 import ProductPhoto from '../components/ProductPhoto';
-import PhotoPicker from '../components/PhotoPicker';
+import PhotoPicker, {type PhotoPickerHandle} from '../components/PhotoPicker';
 import ProfitSummary from '../components/ProfitSummary';
 import WastageLog from '../components/WastageLog';
 import {SupplierAccounts,ExpiryAlerts} from '../components/RetailAccounts';
@@ -291,6 +291,7 @@ export default function Management({ page }: { page: Page }) {
   const [editingMenu, setEditingMenu] = useState<MenuItem | null>(null);
   const [menuPhoto,setMenuPhoto]=useState("");
   const [menuPhotoBusy,setMenuPhotoBusy]=useState(false);
+  const photoPicker = useRef<PhotoPickerHandle>(null);
   const [stockCategory, setStockCategory] =
     useState<InventoryItem["category"]>("ingredient");
   const [menuStockMode, setMenuStockMode] =
@@ -3065,7 +3066,7 @@ export default function Management({ page }: { page: Page }) {
               onSubmit={(event) =>
                 submit(
                   event,
-                  (fields) =>
+                  async (fields) =>
                     mutate(
                       editingMenu ? `/menu/${editingMenu.id}` : "/menu",
                       {
@@ -3075,7 +3076,7 @@ export default function Management({ page }: { page: Page }) {
                         categoryId: value(fields, "categoryId"),
                         price: minor(fields.get("price")),
                         cost: minor(fields.get("cost")),
-                        image:menuPhoto || "/images/chicken-rice.jpg",
+                        image:(await photoPicker.current?.preparePhoto()) || menuPhoto || "/images/chicken-rice.jpg",
                         stockMode: menuStockMode,
                         available: fields.get("available") === "on",
                         preparationMinutes: Number(
@@ -3174,7 +3175,7 @@ export default function Management({ page }: { page: Page }) {
                     placeholder="e.g. Popular"
                   />
                 </Field>
-                <PhotoPicker value={menuPhoto} onChange={setMenuPhoto} onBusyChange={setMenuPhotoBusy} disabled={busy}/>
+                <PhotoPicker ref={photoPicker} value={menuPhoto} onChange={setMenuPhoto} onBusyChange={setMenuPhotoBusy} disabled={busy}/>
                 <Field label="Description" full>
                   <textarea
                     className="input"

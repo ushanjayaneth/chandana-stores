@@ -10,6 +10,12 @@ test('product photo finder recognizes Sunlight, keeps the product draft and save
   const raster = readFileSync('public/images/grocery/soap.jpg');
   await page.route('**/api/product-photos?*', async route => {
     const query = new URL(route.request().url()).searchParams.get('q');
+    if (query === 'clogard mini') {
+      return route.fulfill({json: {photos: [
+        {name: 'Clogard Regular Toothpaste', brand: 'Clogard', size: '70 g', image: remoteImage, credit: {catalog: 'products', barcode: '1234567890123'}},
+        {name: 'Clogard Mini Toothpaste', brand: 'Clogard', image: remoteImage, credit: {catalog: 'products', barcode: '1234567890123'}},
+      ]}});
+    }
     expect(query).toBe('sunlight');
     await route.fulfill({json: {photos: [
       {name: 'Sunlight Washing Powder', brand: 'Sunlight', size: '500 g', image: remoteImage, credit: {catalog: 'products', barcode: '1234567890123'}},
@@ -30,6 +36,11 @@ test('product photo finder recognizes Sunlight, keeps the product draft and save
   await page.getByRole('button', {name: 'Add product', exact: true}).click();
   const product = page.getByRole('dialog', {name: 'Add product', exact: true});
   await product.getByLabel('Product name', {exact: true}).fill('sun light');
+  const preview = product.getByAltText('Product photo preview', {exact: true});
+  await expect(preview).toHaveAttribute('src', '/images/grocery/soap.jpg');
+  const googleLink = product.getByRole('link', {name: 'Search Google Images', exact: true});
+  const googleUrl = new URL((await googleLink.getAttribute('href'))!);
+  expect(googleUrl.searchParams.get('q')).toBe('sunlight product package Sri Lanka');
   await product.getByLabel('Selling price (LKR)', {exact: true}).fill('150');
   await product.getByLabel('Opening stock quantity', {exact: true}).fill('8');
   const find = product.getByRole('button', {name: 'Find product photo', exact: true});
@@ -43,9 +54,17 @@ test('product photo finder recognizes Sunlight, keeps the product draft and save
   await expect(product.getByLabel('Product name', {exact: true})).toHaveValue('sun light');
   await expect(product.getByLabel('Selling price (LKR)', {exact: true})).toHaveValue('150');
   await expect(product.getByLabel('Opening stock quantity', {exact: true})).toHaveValue('8');
-  const preview = product.getByAltText('Product photo preview', {exact: true});
   await expect(preview).toHaveAttribute('src', /^blob:/);
   await expect(product.getByRole('link', {name: 'Photo credit'})).toHaveAttribute('href', /openproductsfacts\.org\/product\/1234567890123/);
+  await product.getByRole('button', {name: 'Add product', exact: true}).click();
+  await expect(product).toHaveCount(0);
+
+  await page.getByRole('button', {name: 'Add product', exact: true}).click();
+  await product.getByLabel('Product name', {exact: true}).fill('Clogard Mini');
+  await expect(product.getByText('Suggested photo · Clogard Mini Toothpaste', {exact: true})).toBeVisible();
+  await expect(preview).toHaveAttribute('src', remoteImage);
+  await product.getByLabel('Selling price (LKR)', {exact: true}).fill('130');
+  await product.getByLabel('Opening stock quantity', {exact: true}).fill('4');
   await product.getByRole('button', {name: 'Add product', exact: true}).click();
   await expect(product).toHaveCount(0);
   await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
@@ -54,4 +73,7 @@ test('product photo finder recognizes Sunlight, keeps the product draft and save
   const card = page.locator('.product-card').filter({has: page.getByRole('heading', {name: 'sun light', exact: true})});
   await expect(card.locator('img')).toHaveAttribute('src', /^blob:/);
   await expect.poll(() => card.locator('img').evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  const autoPhoto = page.locator('.product-card').filter({has: page.getByRole('heading', {name: 'Clogard Mini', exact: true})}).locator('img');
+  await expect(autoPhoto).toHaveAttribute('src', /^blob:/);
+  await expect.poll(() => autoPhoto.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
 });

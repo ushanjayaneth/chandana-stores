@@ -1,6 +1,6 @@
 import {useEffect, useRef, useState} from 'react';
 import {Search, X} from 'lucide-react';
-import {bundledCatalogPhotos, catalogImageUrl, matchingCatalogPhotos, photoBarcode, photoCatalogs, photoQuery, type CatalogPhoto} from '../../shared/product-photo-catalog';
+import {bundledCatalogPhotos, catalogImageUrl, googlePhotoSearchUrl, matchingCatalogPhotos, photoBarcode, photoCatalogs, photoQuery, type CatalogPhoto} from '../../shared/product-photo-catalog';
 import {mediaIdFromReference} from '../../shared/media';
 import {usePOS} from '../lib/context';
 import {useBackLayer} from '../lib/navigation';
@@ -121,6 +121,6 @@ export default function ProductPhotoCatalogue({name, barcode, onChoose, onClose}
       {loading ? 'Searching online catalogues…' : onlineMessage || (results.length ? '' : 'No matching photos. Try the brand and pack size, or add your own photo.')}
     </small>
     {photoQuery(search.query).length >= 2 && !selection &&
-      <a className="photo-catalogue-credit" href={'https://www.google.com/search?tbm=isch&q=' + encodeURIComponent(photoQuery(search.query) + ' product package Sri Lanka')} target="_blank" rel="noreferrer">Search in browser</a>}
+      <a className="photo-catalogue-credit" href={googlePhotoSearchUrl(search.query)} target="_blank" rel="noreferrer">Search Google Images</a>}
   </section>;
 }

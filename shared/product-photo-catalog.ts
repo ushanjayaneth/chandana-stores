@@ -59,3 +59,8 @@ export function catalogImageUrl(image: string, catalog: CatalogPhotoCredit['cata
       /^\/images\/products\/(?:\d+\/)+front_[a-z-]+\.\d+\.(?:400|full)\.jpg$/i.test(url.pathname) ? url.href : null;
   } catch { return null; }
 }
+
+export function googlePhotoSearchUrl(name: string) {
+  const query = photoQuery(name);
+  return "https://www.google.com/search?tbm=isch&q=" + encodeURIComponent(query + " product package Sri Lanka");
+}

@@ -27,7 +27,7 @@ import { commandId, money, number } from "../lib/format";
 import { useBackLayer } from "../lib/navigation";
 import { isProductImageReference } from "../../shared/media";
 import { productStockState } from "../../shared/stock";
-import PhotoPicker from "../components/PhotoPicker";
+import PhotoPicker, {type PhotoPickerHandle} from "../components/PhotoPicker";
 import ProductPhoto from "../components/ProductPhoto";
 import {focusDialog, restoreDialogFocus, useDialogViewport, useBodyScrollLock} from "../components/ui";
 import "../styles/products.css";
@@ -297,6 +297,7 @@ export function ProductDialog({
   const stockSaved = useRef(false);
   const [image, setImage] = useState(product?.image || "");
   const [photoBusy, setPhotoBusy] = useState(false);
+  const photoPicker = useRef<PhotoPickerHandle>(null);
   const [sellingPrice, setSellingPrice] = useState(product ? String(product.price / 100) : "");
   const [enteredCost, setPurchaseCost] = useState<string | null>(null);
   const currentCost = (stockMode === "prepared" ? linkedStock?.unitCost : undefined) ?? product?.cost ?? 0;
@@ -339,6 +340,8 @@ export function ProductDialog({
     setBusy(true);
     setError("");
     try {
+      const suggestedImage = await photoPicker.current?.preparePhoto();
+      if (suggestedImage) payload.image = suggestedImage;
       const result = await mutate<{ item: MenuItem }>(
         item ? `/menu/${item.id}` : "/menu",
         payload,
@@ -532,7 +535,7 @@ export function ProductDialog({
                 Alert at this quantity or below. Leave blank to use 5 units.
               </small>
             </Field>
-            <PhotoPicker value={image} onChange={setImage} onBusyChange={setPhotoBusy} disabled={busy} />
+            <PhotoPicker ref={photoPicker} value={image} onChange={setImage} onBusyChange={setPhotoBusy} disabled={busy} />
             <Field label="Description (optional)" full>
               <textarea
                 className="input"
