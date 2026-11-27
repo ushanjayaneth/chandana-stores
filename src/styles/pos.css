@@ -1099,7 +1099,13 @@
   flex: 1;
   min-width: 0;
 }
+.data-table .order-number-cell {
+  max-width: 24ch;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .order-card-head h3 {
+  overflow-wrap: anywhere;
   font-size: 12px;
   letter-spacing: -0.3px;
 }
@@ -1596,6 +1602,9 @@
   gap: 10px;
 }
 .receipt-meta strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
   font-weight: 550;
 }
 .receipt-preview table {

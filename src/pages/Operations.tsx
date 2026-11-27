@@ -355,7 +355,7 @@ export function Orders({
             <tbody>
               {orders.map((o) => (
                 <tr key={o.id}>
-                  <td>
+                  <td className="order-number-cell">
                     <strong>{o.number}</strong>
                   </td>
                   <td>

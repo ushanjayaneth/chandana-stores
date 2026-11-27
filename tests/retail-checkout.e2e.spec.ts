@@ -89,6 +89,8 @@ test('shared POS opens a shift, prints an offline keyboard checkout once and syn
     await page.keyboard.press('Enter');
     const receipt = page.getByRole('dialog', {name: 'Order receipt', exact: true});
     await expect(receipt).toContainText('125.00');
+    const billNumber = await receipt.locator('.receipt-meta strong').innerText();
+    expect(billNumber.length).toBeGreaterThan(25);
     await expect(page.locator('html')).toHaveAttribute('data-printed', '1');
     await receipt.getByRole('button', {name: 'Close', exact: true}).click();
     await expect(page.getByRole('button', {name: 'Charge order', exact: true})).toBeDisabled();
@@ -106,8 +108,18 @@ test('shared POS opens a shift, prints an offline keyboard checkout once and syn
     const line = other.locator('.order-card-items').getByText(productName, {exact: true});
     await expect(line).toBeVisible();
     expect(await line.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
-    await other.setViewportSize({width: 390, height: 844});
+    await other.setViewportSize({width: 360, height: 640});
     expect(await line.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+    const billHeading = other.getByRole('heading', {name: billNumber, exact: true});
+    await expect(billHeading).toBeVisible();
+    expect(await billHeading.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+    await other.getByRole('button', {name: 'Toggle order view'}).click();
+    const billCell = other.getByRole('cell', {name: billNumber, exact: true});
+    await expect(billCell).toBeVisible();
+    expect(await billCell.evaluate(element => {
+      const wrapper = element.closest('.table-wrap')!;
+      return element.getBoundingClientRect().right <= wrapper.getBoundingClientRect().right;
+    })).toBe(true);
     await other.setViewportSize({width: 1400, height: 900});
     await navigate(other, /^Point of sale/);
     await other.getByRole('button', {name: 'Add ' + productName, exact: true}).click();
