@@ -4,6 +4,7 @@ import {createConnection, isIP, type Socket} from 'node:net';
 import type {FastifyInstance, FastifyRequest} from 'fastify';
 import {z} from 'zod';
 import type {User} from '../shared/types';
+import {receiptLineStyles, type ReceiptLine} from '../shared/receipt';
 import {ApiError} from './database';
 import {permit} from './security';
 import {selectPrivatePrinterAddress, validatePrinterTarget} from './peripherals';
@@ -27,7 +28,7 @@ export async function resolveHardwareTarget(host: string, port: number) {
 }
 
 /** One explicit write. Never retry after bytes may have reached the printer. */
-export async function sendNetworkReceipt(host: string, port: number, text: string) {
+export async function sendNetworkReceipt(host: string, port: number, text: string | ReceiptLine[]) {
   const bytes = escPosText(text);
   const target = await resolveHardwareTarget(host, port);
   return new Promise<{sent: true; bytes: number; message: string}>((resolve, reject) => {
@@ -101,9 +102,14 @@ export function registerHardwareRoutes(app: FastifyInstance, access: {getUser: (
   function userScope(request: FastifyRequest, branchId: string) {const user = access.getUser(request); permit(user, ['owner', 'manager', 'cashier']); access.scoped(user, branchId); return user;}
   const keyFor = (user: User, body: {branchId: string; clientId: string}) => `${user.id}:${body.branchId}:${body.clientId}`;
   app.post('/api/devices/raw-print', async request => {
-    const body = targetSchema.extend({branchId: z.string().min(1).max(160), text: z.string().min(1).max(16000)}).parse(request.body);
+    const printer = targetSchema.extend({branchId: z.string().min(1).max(160)});
+    const body = z.union([
+      printer.extend({text: z.string().min(1).max(16_000)}).strict(),
+      printer.extend({lines: z.array(z.object({text: z.string().max(1_000), style: z.enum(receiptLineStyles).optional()}).strict()).min(1).max(340)
+        .refine(lines => lines.reduce((length, line) => length + line.text.length + 1, 0) <= 48_000)}).strict(),
+    ]).parse(request.body);
     userScope(request, body.branchId);
-    return sendNetworkReceipt(body.host, body.port, body.text);
+    return sendNetworkReceipt(body.host, body.port, 'text' in body ? body.text : body.lines);
   });
   app.post('/api/devices/scanner/connect', async request => {
     const body = identity.extend(targetSchema.shape).parse(request.body);

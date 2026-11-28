@@ -1,6 +1,8 @@
-import {useTranslation} from "../lib/language";
+import {useLanguage, useTranslation} from "../lib/language";
 import {printPeripheralText} from '../lib/peripherals';
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import {receiptMarkup, receiptPrintLines} from '../../shared/receipt';
+import {receiptLayoutCss, receiptStyles} from '../../shared/receipt-styles';
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   Check,
@@ -30,7 +32,7 @@ import { usePOS } from "../lib/context";
 import { commandId, dateTime, elapsed, money, time } from "../lib/format";
 import { EmptyState, Modal, StatusBadge } from "../components/ui";
 import { PaymentDialog } from "./POS";
-import { receiptDimensions, receiptPrintCss } from "../lib/receipt";
+import { receiptDimensions } from "../lib/receipt";
 import { useDevicePreferences } from "../lib/preferences";
 
 const typeIcons = {
@@ -975,15 +977,31 @@ export function Receipt({
   onClose: () => void;
 }) {
   const tr = useTranslation();
+  const {locale} = useLanguage();
   useDevicePreferences();
   const {notify}=usePOS();
   const [printing,setPrinting]=useState(false);
   const printInProgress=useRef(false);
   const autoPrinted=useRef(false);
-  async function printReceipt(){if(printInProgress.current)return;printInProgress.current=true;setPrinting(true);try{
-    const text=[settings.businessName,branch.name,branch.address,branch.phone,`Receipt ${order.number}`,dateTime(order.createdAt),'--------------------------------',...order.lines.flatMap(line=>[`${line.quantity} x ${line.name}`,money(line.lineTotal)]),'--------------------------------',`Subtotal: ${money(order.subtotal)}`,`Discount: ${money(order.discount)}`,`Tax: ${money(order.tax)}`,`Service: ${money(order.serviceCharge)}`,`TOTAL: ${money(order.total)}`,`Paid: ${money(order.paid)}`,`Balance: ${money(Math.max(0,order.total-order.paid))}`,...order.payments.map(payment=>`${payment.method.toUpperCase()}: ${money(payment.amount)}${payment.change?` / Change ${money(payment.change)}`:''}`),settings.receiptFooter].filter(Boolean).join('\n');
-    if(!await printPeripheralText(branch.id,text))window.print();
-  }catch(error){notify((error as Error).message,'error');}finally{printInProgress.current=false;setPrinting(false);}}
+
+  const dimensions = receiptDimensions(settings);
+  async function printReceipt() {
+    if (printInProgress.current) return;
+    printInProgress.current = true;
+    setPrinting(true);
+    try {
+      const lines = locale === 'en' ? receiptPrintLines(order, branch, settings, dimensions) : null;
+      if (!lines || !await printPeripheralText(branch.id, lines)) {
+        await document.fonts?.ready;
+        window.print();
+      }
+    } catch (error) {
+      notify((error as Error).message, 'error');
+    } finally {
+      printInProgress.current = false;
+      setPrinting(false);
+    }
+  }
   useEffect(() => {
     if (autoPrint && !autoPrinted.current) {
       autoPrinted.current = true;
@@ -993,161 +1011,24 @@ export function Receipt({
     window.addEventListener('retail:print-receipt', listener);
     return () => window.removeEventListener('retail:print-receipt', listener);
   });
-  const dimensions = receiptDimensions(settings);
-  const itemDiscount = order.lines.reduce(
-    (sum, line) => sum + (line.discount || 0),
-    0,
-  );
-  const hasItemDiscountMetadata = order.lines.some(
-    (line) => line.discount !== undefined,
-  );
-  const cartDiscount =
-    order.cartDiscount ??
-    (hasItemDiscountMetadata
-      ? Math.max(0, order.discount - itemDiscount)
-      : order.discount);
-  const content = (
-    <>
-      <h2>{settings.businessName || "Chandana Stores"}</h2>
-      <p>
-        {branch.name}
-        <br />
-        {branch.address}
-        <br />
-        {branch.phone}
-      </p>
-      <div className="receipt-meta">
-        <div>
-          <span>{tr("Receipt")}</span>
-          <strong>{order.number}</strong>
-        </div>
-        <div>
-          <span>{tr("Date")}</span>
-          <span>{dateTime(order.createdAt)}</span>
-        </div>
-        <div>
-          <span>{tr("Service")}</span>
-          <span>{order.priceMode==='wholesale'?tr("Wholesale"):tr("Retail")} / {order.type === "takeaway" ? tr("Counter sale") : tr("Delivery")}</span>
-        </div>
-        <div>
-          <span>{tr("Payment")}</span>
-          <span>{order.paymentStatus.toUpperCase()}</span>
-        </div>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>{tr("Item")}</th>
-            <th>{tr("Amount")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {order.lines.map((l) => (
-            <tr key={l.id}>
-              <td>
-                {l.quantity} {l.saleUnit || tr("pcs")} × {l.name}
-                {(l.discount || 0) > 0 && (
-                  <small style={{ display: "block", fontSize: ".85em" }}>{tr("Item discount −")} {money(l.discount || 0)}
-                  </small>
-                )}
-              </td>
-              <td>{money(l.lineTotal)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="receipt-totals">
-        <div>
-          <span>{tr("Subtotal")}</span>
-          <span>{money(order.subtotal)}</span>
-        </div>
-        {itemDiscount > 0 && (
-          <div>
-            <span>{tr("Item discounts")}</span>
-            <span>− {money(itemDiscount)}</span>
-          </div>
-        )}
-        {cartDiscount > 0 && (
-          <div>
-            <span>
-              {hasItemDiscountMetadata || order.cartDiscount !== undefined
-                ? tr("Cart discount")
-                : tr("Discount")}
-            </span>
-            <span>− {money(cartDiscount)}</span>
-          </div>
-        )}
-        <div>
-          <span>{tr("Service charge")}</span>
-          <span>{money(order.serviceCharge)}</span>
-        </div>
-        <div>
-          <span>{tr("Tax")}</span>
-          <span>{money(order.tax)}</span>
-        </div>
-        <div className="total">
-          <strong>{tr("Total")}</strong>
-          <strong>{money(order.total)}</strong>
-        </div>
-        <div>
-          <span>{tr("Paid")}</span>
-          <span>{money(order.paid)}</span>
-        </div>
-        {order.refunded > 0 && (
-          <div>
-            <span>{tr("Refunded")}</span>
-            <span>{money(order.refunded)}</span>
-          </div>
-        )}
-        {order.payments.map((p) => (
-          <div key={p.id}>
-            <span>
-              {p.method.toUpperCase()}
-              {p.change > 0 ? tr("· change") : ""}
-            </span>
-            <span>{money(p.change > 0 ? p.change : p.amount)}</span>
-          </div>
-        ))}
-      </div>
-      <p className="receipt-thanks">
-        {settings.receiptFooter || tr("Thank you for dining with us.")}
-      </p>
-      <p className="receipt-copy">{tr("COPY · Retain for your records")}</p>
-    </>
-  );
+  // Shared receipt markup escapes every interpolated label and saved text value.
+  const receiptHtml = {__html: receiptMarkup(order, branch, settings, {locale, tr})};
   return (
     <>
+      <style>{receiptStyles + receiptLayoutCss(dimensions)}</style>
       <Modal title={tr("Order receipt")} subtitle={order.number} onClose={onClose}>
-        <div
-          className="receipt-preview"
-          style={
-            {
-              width: `min(100%, ${dimensions.content}mm)`,
-              "--font-scale": 1,
-            } as CSSProperties
-          }
-        >
-          {content}
-        </div>
-        <p className="preference-note" style={{ textAlign: "center" }}>
-          {dimensions.paper} {tr("mm paper ·")} {dimensions.content} {tr("mm content ·")}{" "}
-          {dimensions.offset} mm offset. Match the printer dialog's paper size
-          to this layout.
+        <div className="receipt-sheet receipt-preview" dangerouslySetInnerHTML={receiptHtml} />
+        <p className="preference-note" style={{textAlign: 'center'}}>
+          {tr("{0} mm paper · {1} mm print width", dimensions.paper, dimensions.content)}
         </p>
         <div className="form-actions">
           <button className="button button-ghost" onClick={onClose}>{tr("Close")}</button>
-          <button
-            className="button button-primary"
-            disabled={printing} onClick={()=>void printReceipt()}
-          >
-            <Printer size={14} /> {tr("Print receipt")}</button>
+          <button className="button button-primary" disabled={printing} onClick={() => void printReceipt()}>
+            <Printer size={14} /> {tr("Print receipt")}
+          </button>
         </div>
       </Modal>
-      <style>
-        {receiptPrintCss(settings) +
-          " @media print{.print-receipt .total{font-size:1.1em!important}.print-receipt .receipt-copy{font-size:.7em!important}.print-receipt th:first-child{text-align:left}}"}
-      </style>
-      <div className="print-receipt">{content}</div>
+      <div className="receipt-sheet receipt-print-only" aria-hidden="true" dangerouslySetInnerHTML={receiptHtml} />
     </>
   );
 }

@@ -92,6 +92,26 @@ test('shared POS opens a shift, prints an offline keyboard checkout once and syn
     const billNumber = await receipt.locator('.receipt-meta strong').innerText();
     expect(billNumber.length).toBeGreaterThan(25);
     await expect(page.locator('html')).toHaveAttribute('data-printed', '1');
+    const preview = receipt.locator('.receipt-sheet');
+    await expect(preview.locator('.receipt-heading h2')).not.toBeEmpty();
+    await expect(preview.locator('.receipt-line-amount')).toHaveText('Rs. 125.00');
+    await expect(preview.locator('.receipt-grand-total .receipt-amount')).toHaveText('Rs. 125.00');
+    await page.emulateMedia({media: 'print'});
+    const printed = page.locator('.receipt-print-only');
+    await expect(printed).toBeVisible();
+    await expect(page.locator('.app')).toBeHidden();
+    const layout = await printed.evaluate(sheet => ({
+      width: sheet.getBoundingClientRect().width,
+      scrollWidth: sheet.scrollWidth,
+      base: parseFloat(getComputedStyle(sheet).fontSize),
+      title: parseFloat(getComputedStyle(sheet.querySelector('h2')!).fontSize),
+      price: Number(getComputedStyle(sheet.querySelector('.receipt-line-amount')!).fontWeight),
+    }));
+    expect(layout.scrollWidth).toBeLessThanOrEqual(Math.ceil(layout.width));
+    expect(layout.title).toBeGreaterThan(layout.base * 1.25);
+    expect(layout.title).toBeLessThan(layout.base * 1.55);
+    expect(layout.price).toBeGreaterThanOrEqual(700);
+    await page.emulateMedia({media: 'screen'});
     await receipt.getByRole('button', {name: 'Close', exact: true}).click();
     await expect(page.getByRole('button', {name: 'Charge order', exact: true})).toBeDisabled();
     await navigate(page, /^Staff & payroll/);

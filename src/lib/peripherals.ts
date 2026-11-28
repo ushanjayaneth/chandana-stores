@@ -1,3 +1,4 @@
+import type {ReceiptLine} from '../../shared/receipt';
 export interface PrinterPreference {
   selectedPrinterId: string;
   selectedPrinterName: string;
@@ -132,11 +133,28 @@ export function createScannerLineDecoder(receive: (value: string) => void) {
   };
 }
 
-/** Text-only ESC/POS. Control bytes in user data cannot become printer commands. */
-export function escPosText(text: string) {
-  if (!text.trim() || text.length > 16000) throw new Error('Receipt text must contain between 1 and 16,000 characters.');
-  const printable = text.replace(/\r\n?/g, '\n').replace(/[^\x20-\x7e\n]/g, '?');
-  return new Uint8Array([0x1b, 0x40, ...new TextEncoder().encode(printable), 10, 10, 10, 0x1d, 0x56, 0x42, 0]);
+/** Encode a small, fixed set of styles. Saved text can never contain printer commands. */
+export function escPosText(receipt: string | ReceiptLine[]) {
+  const sanitize = (text: string) => text.replace(/\r\n?/g, '\n').replace(/[^\x20-\x7e\n]/g, '?');
+  const payload = typeof receipt === 'string' ? receipt : receipt.map(line => line.text).join('\n');
+  if (!payload.trim() || payload.length > 48_000 || typeof receipt === 'string' && payload.length > 16_000)
+    throw new Error('Receipt text is empty or too long to print.');
+  const encoder = new TextEncoder();
+  const bytes = [0x1b, 0x40];
+  if (typeof receipt === 'string') bytes.push(...encoder.encode(sanitize(receipt)), 10);
+  else for (const {text, style} of receipt) {
+    const centered = style === 'title' || style === 'center';
+    const tall = style === 'title' || style === 'total';
+    const bold = tall || style === 'bold';
+    if (centered) bytes.push(0x1b, 0x61, 1);
+    if (bold) bytes.push(0x1b, 0x45, 1);
+    if (tall) bytes.push(0x1d, 0x21, 1);
+    bytes.push(...encoder.encode(sanitize(text)), 10);
+    if (tall) bytes.push(0x1d, 0x21, 0);
+    if (bold) bytes.push(0x1b, 0x45, 0);
+    if (centered) bytes.push(0x1b, 0x61, 0);
+  }
+  return new Uint8Array([...bytes, 10, 10, 0x1d, 0x56, 0x42, 0]);
 }
 
 interface SerialPortLike extends EventTarget {
@@ -406,13 +424,13 @@ class PeripheralController {
       }
     };
   }
-  async print(text: string) {
+  async print(text: string | ReceiptLine[]) {
     const profile = this.preference.printer;
     if (profile.transport === 'browser') return false;
     const data = escPosText(text);
     if (profile.transport === 'lan') {
       const {api} = await import('./api');
-      await api('/devices/raw-print', {branchId: this.branchId, host: profile.host, port: profile.port, text});
+      await api('/devices/raw-print', {branchId: this.branchId, host: profile.host, port: profile.port, ...(typeof text === 'string' ? {text} : {lines: text})});
       this.update('printer', 'connected', 'Receipt bytes accepted by the TCP connection. Verify the paper output.');
       return true;
     }
@@ -430,4 +448,4 @@ export function peripheralController(branchId: string) {
   return controller;
 }
 export function startPeripheralConnections(branchId: string) {return peripheralController(branchId).start();}
-export function printPeripheralText(branchId: string, text: string) {return peripheralController(branchId).print(text);}
+export function printPeripheralText(branchId: string, text: string | ReceiptLine[]) {return peripheralController(branchId).print(text);}
