@@ -1,7 +1,20 @@
 import {strict as assert} from 'node:assert';
 import {test} from 'node:test';
 import {downloadCataloguePhoto, findProductPhotos} from '../server/product-photos';
-import {photoQuery} from '../shared/product-photo-catalog';
+import {bundledCatalogPhotos, googlePhotoSearchUrl, matchingCatalogPhotos, photoQuery} from '../shared/product-photo-catalog';
+
+test('Sinhala grocery aliases retain brands and weights and can match bundled photos', () => {
+  assert.equal(photoQuery('බිත්තර'), 'eggs');
+  assert.equal(photoQuery('SPAR පාන් පිටි 1 කිලෝ'), 'spar wheat flour 1kg');
+  assert.equal(photoQuery('ක්ලෝගාඩ් මිනි දත් බෙහෙත්'), 'clogard mini toothpaste');
+  assert.equal(photoQuery('චොකලට් බිස්කට් 50 ග්‍රෑම්'), 'chocolate biscuits 50g');
+  assert.equal(photoQuery('අත් ඔරලෝසුව'), 'අත් ඔරලෝසුව');
+  assert.equal(matchingCatalogPhotos(bundledCatalogPhotos, 'බිත්තර', '')[0]?.image, '/images/grocery/eggs.jpg');
+  assert.equal(matchingCatalogPhotos(bundledCatalogPhotos, 'පාන් පිටි', '')[0]?.image, '/images/grocery/flour.jpg');
+  const google = new URL(googlePhotoSearchUrl('අත් ඔරලෝසුව'));
+  assert.equal(google.searchParams.get('q'), 'අත් ඔරලෝසුව Sri Lanka');
+  assert.equal(google.searchParams.get('tbm'), 'isch');
+});
 
 test('product photo search broadens to a grocery retailer and a general photo catalogue', async t => {
   const biscuit = 'https://onlinekade.lk/wp-content/uploads/Tiger-Chocolate-Biscuit-53.2G.webp';

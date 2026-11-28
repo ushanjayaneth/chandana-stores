@@ -46,18 +46,50 @@ const groceryPlurals: Record<string, string> = {
   tomatoes: 'tomato', potatoes: 'potato', onions: 'onion', packets: 'packet',
 };
 
+// Expand common Sinhala search terms for catalogues with mostly English listings.
+const sinhalaPhotoTerms: Record<string, string> = {
+  'පාන් පිටි': 'wheat flour', 'පාන්පිටි': 'wheat flour', 'තිරිඟු පිටි': 'wheat flour', 'තිරිඟුපිටි': 'wheat flour',
+  'කිරි පිටි': 'milk powder', 'කිරිපිටි': 'milk powder', 'පොල් තෙල්': 'coconut oil', 'පොල්තෙල්': 'coconut oil',
+  'දත් බෙහෙත්': 'toothpaste', 'දත්බෙහෙත්': 'toothpaste', 'ක්ලෝගාඩ්': 'clogard', 'ක්ලෝගාර්ඩ්': 'clogard',
+  'බිත්තර': 'eggs', 'බිත්තරයක්': 'eggs', 'පිටි': 'flour', 'පාන්': 'bread', 'කිරි': 'milk',
+  'හාල්': 'rice', 'සහල්': 'rice', 'සීනි': 'sugar', 'පරිප්පු': 'lentils', 'අල': 'potatoes', 'අර්තාපල්': 'potatoes',
+  'ලූනු': 'onion', 'ළූණු': 'onion', 'ළූනු': 'onion', 'ලූණු': 'onion', 'ලුණු': 'salt',
+  'තක්කාලි': 'tomato', 'පොල්': 'coconut', 'තෙල්': 'oil', 'බිස්කට්': 'biscuits', 'චොකලට්': 'chocolate',
+  'මිරිස්': 'chilli', 'මිරිස් කුඩු': 'chilli powder', 'කහ කුඩු': 'turmeric powder', 'සබන්': 'soap',
+  'තේ': 'tea', 'කෝපි': 'coffee', 'වතුර': 'water', 'කඩල': 'chickpeas', 'ෂැම්පු': 'shampoo',
+  'බැටරි': 'battery', 'කොස්ස': 'broom', 'පැකට්': 'pack', 'ග්‍රෑම්': 'g', 'ග්රෑම්': 'g', 'කිලෝ': 'kg',
+  'මිලිලීටර්': 'ml', 'ලීටර්': 'l', 'මිනි': 'mini',
+};
+const sinhalaPhotoPattern = new RegExp(
+  '(?<!\\S)(' + Object.keys(sinhalaPhotoTerms).sort((a, b) => b.length - a.length).join('|') + ')(?!\\S)', 'gu',
+);
+
 export function photoQuery(value: string) {
-  return value.normalize('NFKC').toLowerCase()
+  return value.normalize('NFKC').toLowerCase().replace(/[\u200c\u200d]/gu, '')
     .replace(/sun[\s-]+light|\u0dc3\u0db1\u0dca\s*\u0dbd\u0dba\u0dd2\u0da7\u0dca/gu, 'sunlight')
     .replace(/\u0dc3\u0db6\u0db1\u0dca\s*\u0d9a\u0dd4\u0da9\u0dd4|soap\s+powder|wash\s+powder|laundry\s+detergent/gu, 'washing powder')
     .replace(/\u0dc3\u0db6\u0db1\u0dca/gu, 'soap')
-    .replace(/(\d)\s+(kg|g|ml|l)\b/g, '$1$2')
     .replace(/[^\p{L}\p{N}\p{M}.]+/gu, ' ')
     .replace(/\.(?!\d)|(?<!\d)\./g, ' ')
-    .trim().split(/\s+/).map(word => Object.hasOwn(grocerySpellings, word) ? grocerySpellings[word] : word).join(' ');
+    .trim().replace(/\s+/g, ' ')
+    .replace(sinhalaPhotoPattern, word => sinhalaPhotoTerms[word])
+    .replace(/(\d)\s+(kg|g|ml|l)\b/g, '$1$2')
+    .split(' ').map(word => Object.hasOwn(grocerySpellings, word) ? grocerySpellings[word] : word).join(' ');
+}
+
+export function googlePhotoSearchUrl(name: string) {
+  const query = photoQuery(name);
+  return 'https://www.google.com/search?' + new URLSearchParams({tbm: 'isch', q: query + ' Sri Lanka', safe: 'active'});
 }
 
 export const bundledCatalogPhotos: CatalogPhoto[] = [
+  {name: 'Fresh eggs', keywords: 'chicken egg', image: '/images/grocery/eggs.jpg'},
+  {name: 'SPAR Wheat Flour', brand: 'SPAR', size: '1 kg', keywords: 'bread flour', image: '/images/grocery/flour.jpg', localMarket: true},
+  {name: 'White sugar', image: '/images/grocery/sugar.jpg'},
+  {name: 'Samba rice', image: '/images/grocery/rice.jpg'},
+  {name: 'Red lentils', keywords: 'dhal dal', image: '/images/grocery/lentils.jpg'},
+  {name: 'Potatoes', image: '/images/grocery/potato.jpg'},
+  {name: 'Red onion', image: '/images/grocery/onion.jpg'},
   {name: 'Sunlight Lemon Laundry Soap', brand: 'Sunlight', size: 'Bar', keywords: 'soap bar laundry washing', image: '/images/grocery/soap.jpg', localMarket: true},
   {name: 'Surf Excel Washing Powder Aloe Vera', brand: 'Surf Excel', size: '500 g', keywords: 'laundry detergent soap powder', image: '/images/grocery/detergent.jpg', localMarket: true},
   {name: 'Maliban Custard Cream Biscuits', brand: 'Maliban', size: '200 g', keywords: 'cream biscuit biscuits cookies', image: '/images/grocery/biscuits.jpg', localMarket: true},

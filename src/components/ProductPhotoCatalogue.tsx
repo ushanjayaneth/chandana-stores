@@ -1,67 +1,42 @@
 import {useTranslation} from "../lib/language";
-import {useEffect, useRef, useState} from 'react';
-import {Search, X} from 'lucide-react';
-import {bundledCatalogPhotos, isOnlineCatalogPhoto, relatedPhotoQuery, retailerProductUrl, matchingCatalogPhotos, photoBarcode, photoCatalogs, photoQuery, photoSearchTimeoutMs, type CatalogPhoto} from '../../shared/product-photo-catalog';
+import {useEffect, useRef} from 'react';
+import {ExternalLink, X} from 'lucide-react';
+import {bundledCatalogPhotos, googlePhotoSearchUrl, relatedPhotoQuery, retailerProductUrl, matchingCatalogPhotos, photoCatalogs, type CatalogPhoto} from '../../shared/product-photo-catalog';
 import {mediaIdFromReference} from '../../shared/media';
 import {usePOS} from '../lib/context';
 import {useBackLayer} from '../lib/navigation';
 import ProductPhoto from './ProductPhoto';
 
-export default function ProductPhotoCatalogue({name, barcode, onChoose, onClose}: {
+export default function ProductPhotoCatalogue({name, query, barcode, remote, loading, online, unavailable, scrollRequest, onSearch, onChoose, onClose}: {
   name: string;
+  query: string;
   barcode: string;
+  remote: CatalogPhoto[];
+  loading: boolean;
+  online: boolean;
+  unavailable: boolean;
+  scrollRequest: number;
+  onSearch: (name: string) => void;
   onChoose: (photo: CatalogPhoto) => void;
   onClose: () => void;
 }) {
   const tr = useTranslation();
   const {data} = usePOS();
-  const [input, setInput] = useState(name);
-  const [search, setSearch] = useState({query: name, barcode});
-  const [remote, setRemote] = useState<CatalogPhoto[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [onlineMessage, setOnlineMessage] = useState('');
   const panel = useRef<HTMLElement>(null);
 
   useBackLayer(true, onClose, 'product-photo-catalogue');
 
   useEffect(() => {
-    panel.current?.scrollIntoView({block: 'nearest'});
-
-  }, []);
-
-  useEffect(() => {
-    const query = photoQuery(search.query).slice(0, 120);
-    const code = photoBarcode(search.barcode);
-    setRemote([]);
-    setOnlineMessage('');
-    setLoading(false);
-    if (query.length < 2 && !code) return;
-    if (navigator.onLine === false) {
-      setOnlineMessage(tr("Online catalogues are available when you reconnect."));
-      return;
-    }
-    const controller = new AbortController();
-    const params = new URLSearchParams({q: query, barcode: code});
-    setLoading(true);
-    fetch('/api/product-photos?' + params, {signal: AbortSignal.any([controller.signal, AbortSignal.timeout(photoSearchTimeoutMs)])})
-      .then(async response => {
-        if (!response.ok) throw new Error('Search unavailable');
-        const json = await response.json() as {photos: CatalogPhoto[]};
-        if (!Array.isArray(json.photos)) throw new Error('Search unavailable');
-        if (!controller.signal.aborted) setRemote(json.photos.filter(isOnlineCatalogPhoto));
-      })
-      .catch(() => {if (!controller.signal.aborted) setOnlineMessage(tr("Online catalogues are temporarily unavailable."));})
-      .finally(() => {if (!controller.signal.aborted) setLoading(false);});
-    return () => controller.abort();
-  }, [search]);
+    if (scrollRequest) panel.current?.scrollIntoView({block: 'nearest'});
+  }, [scrollRequest]);
 
   const ownPhotos: CatalogPhoto[] = data.menu.flatMap(item =>
     mediaIdFromReference(item.image) || /^\/images\/grocery\/[a-z-]+\.jpg$/.test(item.image) && !item.image.endsWith('/default.jpg')
-      ? [{name: item.name, barcode: item.barcode, image: item.image, localMarket: true}] : []);
-  const matches = matchingCatalogPhotos([...bundledCatalogPhotos, ...ownPhotos, ...remote.filter(photo => !photo.related)], search.query, search.barcode);
+      ? [{name: item.name, keywords: item.nameSi, barcode: item.barcode, image: item.image, localMarket: true}] : []);
+  const matches = matchingCatalogPhotos([...bundledCatalogPhotos, ...ownPhotos, ...remote.filter(photo => !photo.related)], query, barcode);
   const related = remote.filter(photo => photo.related);
-  const relatedQuery = relatedPhotoQuery(search.query);
-  const smallPacks = !matches.length && relatedQuery !== photoQuery(search.query)
+  const relatedQuery = relatedPhotoQuery(query);
+  const smallPacks = !matches.length && relatedQuery !== query
     ? matchingCatalogPhotos(remote.filter(photo => photo.retailer), relatedQuery, '') : [];
   const hasRelated = related.length > 0 || smallPacks.length > 0;
   const seen = new Set<string>();
@@ -71,10 +46,12 @@ export default function ProductPhotoCatalogue({name, barcode, onChoose, onClose}
     return true;
   }).slice(0, 36);
 
-  function runSearch() {
-    setLoading(false);
-    setSearch({query: input.trim(), barcode: input.trim() === name.trim() ? barcode : ''});
-  }
+  const canSearch = query.length >= 2 || Boolean(barcode);
+  const status = !canSearch ? tr('Enter a product name to find photos.')
+    : loading ? tr('Searching online catalogues…')
+    : !online ? tr('Online catalogues are available when you reconnect.')
+    : unavailable ? tr('Online catalogues are temporarily unavailable.')
+    : results.length ? '' : tr('No matching photos in the catalogues. Try Google Images or refine the name.');
 
   return <section ref={panel} className="photo-catalogue" aria-label={tr("Product photo catalogue")} onKeyDown={event => {
     if (event.key === 'Escape') {event.stopPropagation(); event.preventDefault(); onClose();}
@@ -84,14 +61,15 @@ export default function ProductPhotoCatalogue({name, barcode, onChoose, onClose}
       <button type="button" className="icon-button" aria-label={tr("Close photo search")} onClick={onClose}><X size={16}/></button>
     </div>
     <div className="photo-catalogue-search">
-      <input type="search" className="input" aria-label={tr("Search product photos")} value={input} maxLength={120}
+      <input type="search" className="input" aria-label={tr("Search product photos")} value={name} maxLength={120}
         placeholder={tr("Product name, brand or pack size")}
-        onChange={event => setInput(event.target.value)} onKeyDown={event => {
-          if (event.key === 'Enter') {event.preventDefault(); event.stopPropagation(); runSearch();}
+        onChange={event => onSearch(event.target.value)} onKeyDown={event => {
+          if (event.key === 'Enter') {event.preventDefault(); event.stopPropagation();}
         }}/>
-      <button type="button" className="button" onClick={runSearch} disabled={photoQuery(input).length < 2 && !photoBarcode(barcode)}><Search size={14}/> {tr("Search")}</button>
+      {online && query.length >= 2 && <a className="button button-ghost" href={googlePhotoSearchUrl(query)}
+        target="_blank" rel="noreferrer"><ExternalLink size={14}/> {tr('Google Images')}</a>}
     </div>
-    {hasRelated && <p className="photo-catalogue-help">{relatedQuery !== photoQuery(search.query)
+    {hasRelated && <p className="photo-catalogue-help">{relatedQuery !== query
       ? tr("Related pack sizes") : tr("Related images. Check the product before selecting.")}</p>}
     {results.length > 0 && <ul className="photo-catalogue-grid">
       {results.map(photo => {
@@ -112,8 +90,6 @@ export default function ProductPhotoCatalogue({name, barcode, onChoose, onClose}
         </li>;
       })}
     </ul>}
-    <small className="photo-catalogue-help" role="status">
-      {loading ? tr("Searching online catalogues…") : onlineMessage || (results.length ? '' : tr("No matching photos. Try the brand and pack size, or add your own photo."))}
-    </small>
+    <small className="photo-catalogue-help" role="status">{status}</small>
   </section>;
 }

@@ -18,8 +18,8 @@
 .photo-catalogue-heading{justify-content:space-between}
 .photo-catalogue-heading h3{margin:0;font-size:14px}
 .photo-catalogue-search .input{width:100%;min-width:0}
-.photo-catalogue-search .button{white-space:nowrap}
-.photo-catalogue-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(130px,48%),1fr));gap:8px;margin:0;padding:2px 4px 2px 2px;list-style:none;max-height:min(42dvh,350px);overflow:auto;overscroll-behavior:contain}
+.photo-catalogue-search .button{white-space:nowrap;text-decoration:none}
+.photo-catalogue-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(130px,48%),1fr));gap:8px;margin:0;padding:2px 4px 2px 2px;list-style:none;max-height:min(42dvh,350px);overflow:auto;overscroll-behavior:contain}
 .photo-catalogue-grid li{min-width:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
 .photo-catalogue-grid li:focus-within{outline:2px solid var(--accent);outline-offset:-2px}
 .photo-catalogue-result{display:flex;flex-direction:column;align-items:flex-start;gap:4px;width:100%;min-height:44px;padding:6px;border:0;background:none;color:var(--text);font:inherit;text-align:left;cursor:pointer}

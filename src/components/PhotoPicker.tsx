@@ -16,6 +16,7 @@ const uploadedReference = (value: string) => Boolean(mediaIdFromReference(value)
 export interface PhotoPickerHandle {preparePhoto: () => Promise<string | undefined>}
 
 type ProductSearch = {name: string; barcode: string};
+type PhotoSearchResult = {key: string; photos: CatalogPhoto[]; failed: boolean};
 
 export function PhotoPicker({ref, value, onChange, onBusyChange, disabled = false}: {ref?: Ref<PhotoPickerHandle>; value: string; onChange: (value: string) => void; onBusyChange?: (busy: boolean) => void; disabled?: boolean}) {
   const tr = useTranslation();
@@ -25,16 +26,26 @@ export function PhotoPicker({ref, value, onChange, onBusyChange, disabled = fals
   const picker = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [catalogue, setCatalogue] = useState<ProductSearch | null>(null);
+  const [scrollRequest, setScrollRequest] = useState(0);
+  const [manualSearch, setManualSearch] = useState<string | null>(null);
+  const [closedKey, setClosedKey] = useState('');
   const [product, setProduct] = useState<ProductSearch>({name: "", barcode: ""});
   const [online, setOnline] = useState(() => navigator.onLine);
-  const [suggestion, setSuggestion] = useState<{key: string; photo: CatalogPhoto} | null>(null);
+  const [searchResult, setSearchResult] = useState<PhotoSearchResult | null>(null);
   const [dismissed, setDismissed] = useState("");
   const [selectedPhoto, setSelectedPhoto] = useState<CatalogPhoto | null>(null);
-  const query = photoQuery(product.name);
-  const barcode = photoBarcode(product.barcode);
+  const searchText = manualSearch ?? product.name;
+  const query = photoQuery(searchText.slice(0, 120));
+  const barcode = manualSearch === null ? photoBarcode(product.barcode) : '';
   const searchKey = JSON.stringify([query, barcode]);
-  const suggestedPhoto = !value && dismissed !== searchKey && suggestion?.key === searchKey ? suggestion.photo : null;
+  const validSearch = query.length >= 2 || Boolean(barcode);
+  const showCatalogue = scrollRequest > 0 || manualSearch !== null || (!value && validSearch && closedKey !== searchKey);
+  const currentResult = searchResult?.key === searchKey ? searchResult : null;
+  const remote = online ? currentResult?.photos ?? [] : [];
+  const searchPending = showCatalogue && validSearch && online && !currentResult;
+  const suggestedPhoto = showCatalogue && !value && manualSearch === null && dismissed !== searchKey
+    ? matchingCatalogPhotos([...bundledCatalogPhotos, ...remote.filter(photo => !photo.related)], query, barcode)[0] ?? null
+    : null;
   const preview = value || suggestedPhoto?.image || "";
   const previewPhoto = selectedPhoto ?? suggestedPhoto;
   const address = selectedPhoto?.image ?? (uploadedReference(value) ? '' : value);
@@ -47,9 +58,15 @@ export function PhotoPicker({ref, value, onChange, onBusyChange, disabled = fals
       setProduct({name: String(fields.get("name") ?? "").trim(), barcode: String(fields.get("barcode") ?? "").trim()});
     };
     const update = (event: Event) => {
-      if (event.target instanceof HTMLInputElement && ["name", "barcode"].includes(event.target.name)) read();
+      if (event.target instanceof HTMLInputElement && ["name", "barcode"].includes(event.target.name)) {
+        setManualSearch(null);
+        read();
+      }
     };
-    const connection = () => setOnline(navigator.onLine);
+    const connection = () => {
+      setOnline(navigator.onLine);
+      if (navigator.onLine) setSearchResult(result => result?.failed ? null : result);
+    };
     read();
     form.addEventListener("input", update);
     window.addEventListener("online", connection);
@@ -58,26 +75,28 @@ export function PhotoPicker({ref, value, onChange, onBusyChange, disabled = fals
   }, []);
 
   useEffect(() => {
-    if (!online || disabled || busy || value || catalogue || dismissed === searchKey || (query.length < 3 && !barcode)) return;
+    if (!searchPending || disabled || busy) return;
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
-      const bundled = matchingCatalogPhotos(bundledCatalogPhotos, query, barcode);
-      if (bundled.length && !barcode) {setSuggestion({key: searchKey, photo: bundled[0]}); return;}
       const params = new URLSearchParams({q: query, barcode});
-      let onlinePhotos: CatalogPhoto[] = [];
       try {
         const response = await fetch("/api/product-photos?" + params, {signal: AbortSignal.any([controller.signal, AbortSignal.timeout(photoSearchTimeoutMs)])});
-        if (response.ok) {
-          const data = await response.json();
-          if (Array.isArray(data.photos)) onlinePhotos = data.photos.filter(isOnlineCatalogPhoto);
-        }
-      } catch { /* Manual search is available and the product form stays usable. */ }
-      if (controller.signal.aborted) return;
-      const first = matchingCatalogPhotos([...bundled, ...onlinePhotos.filter(photo => !photo.related)], query, barcode)[0];
-      setSuggestion(first ? {key: searchKey, photo: first} : null);
-    }, 850);
+        if (!response.ok) throw new Error('Photo search unavailable');
+        const data = await response.json();
+        if (!Array.isArray(data.photos)) throw new Error('Invalid photo search response');
+        if (!controller.signal.aborted) setSearchResult({key: searchKey, photos: data.photos.filter(isOnlineCatalogPhoto), failed: false});
+      } catch {
+        if (!controller.signal.aborted) setSearchResult({key: searchKey, photos: [], failed: true});
+      }
+    }, 425);
     return () => {window.clearTimeout(timer); controller.abort();};
-  }, [barcode, busy, catalogue, disabled, dismissed, online, query, searchKey, value]);
+  }, [barcode, busy, disabled, query, searchKey, searchPending]);
+
+  function closeCatalogue() {
+    setClosedKey(JSON.stringify([photoQuery(product.name.slice(0, 120)), photoBarcode(product.barcode)]));
+    setManualSearch(null);
+    setScrollRequest(0);
+  }
   const uploaded = uploadedReference(value);
   const shared=Boolean(sharedCloudSource());
   async function select(file?: File) {
@@ -87,6 +106,7 @@ export function PhotoPicker({ref, value, onChange, onBusyChange, disabled = fals
       const saved = await compressFile(file);
       setSelectedPhoto(null);
       onChange(saved);
+      closeCatalogue();
     }
     catch (cause) {setError(cause instanceof Error ? cause.message : tr("This photo could not be saved."));}
     finally {setBusy(false); onBusyChange?.(false); if (input.current) input.current.value = ''; if (camera.current) camera.current.value = '';}
@@ -124,7 +144,7 @@ export function PhotoPicker({ref, value, onChange, onBusyChange, disabled = fals
     setSelectedPhoto(photo);
     onChange(photo.image);
     setError('');
-    setCatalogue(null);
+    closeCatalogue();
   }
   return <div ref={picker} className="photo-picker product-field-full">
     <div className="photo-picker-heading"><span>{tr("Product photo")}</span><small>{tr("Camera, file or image link")}</small></div>
@@ -133,11 +153,9 @@ export function PhotoPicker({ref, value, onChange, onBusyChange, disabled = fals
       <div className="photo-picker-controls">
         <label className="photo-picker-link" htmlFor={`${id}-url`}><Link size={14} /><input id={`${id}-url`} className="input" aria-label={tr("Photo URL")} type="text" maxLength={500} placeholder="https://example.com/photo.jpg" value={address} disabled={disabled || busy} onChange={event => {setSelectedPhoto(null); onChange(event.target.value); setError('');}} /></label>
         <div className="photo-picker-buttons"><button type="button" className="button button-ghost" disabled={disabled || busy} onClick={() => camera.current?.click()}><Camera size={14} />{tr("Take photo")}</button><button type="button" className="button button-ghost" disabled={disabled || busy} onClick={() => input.current?.click()}><Upload size={14} />{busy ? tr("Preparing photo…") : tr("Choose photo")}</button>
-        <button type="button" className="button button-ghost" disabled={disabled || busy} aria-expanded={!!catalogue} onClick={event => {
-          if (catalogue) {setCatalogue(null); return;}
-          const form = event.currentTarget.form;
-          const fields = form ? new FormData(form) : null;
-          setCatalogue({name: String(fields?.get("name") ?? "").trim(), barcode: String(fields?.get("barcode") ?? "").trim()});
+        <button type="button" className="button button-ghost" disabled={disabled || busy} aria-expanded={showCatalogue} onClick={() => {
+          if (currentResult?.failed) setSearchResult(null);
+          setScrollRequest(request => request + 1);
         }}><Search size={14}/> {tr("Search images")}</button>
         {preview && <button type="button" className="icon-button" aria-label={tr("Remove photo")} disabled={disabled || busy} onClick={() => {setDismissed(searchKey); setSelectedPhoto(null); onChange('');}}><X size={15} /></button>}</div>
         <input ref={input} id={`${id}-file`} className="photo-picker-file" type="file" accept="image/jpeg,image/png,image/webp" aria-label={tr("Upload product photo")} disabled={disabled || busy} onChange={event => {void select(event.target.files?.[0]);}} />
@@ -146,8 +164,12 @@ export function PhotoPicker({ref, value, onChange, onBusyChange, disabled = fals
         <small role="status">{busy ? tr("Compressing and saving. Please keep this form open.") : uploaded ? shared ? tr("Saved on this device. Photos sync automatically when online.") : isDeviceWorkspace() ? tr("Saved on this device. Included in encrypted backups; cloud upload needs a connected hub.") : 'Compressed photo saved to the branch database.' : tr("JPEG, PNG or WebP. Optimized for clear product photos.")}</small>
       </div>
     </div>
-    {catalogue && <Suspense fallback={<small role="status">{tr("Opening photo catalogue…")}</small>}>
-      <ProductPhotoCatalogue {...catalogue} onChoose={chooseCataloguePhoto} onClose={() => setCatalogue(null)} />
+    {showCatalogue && <Suspense fallback={<small role="status">{tr("Opening photo catalogue…")}</small>}>
+      <ProductPhotoCatalogue
+        name={searchText} query={query} barcode={barcode} remote={remote} loading={searchPending}
+        online={online} unavailable={Boolean(currentResult?.failed)} scrollRequest={scrollRequest}
+        onSearch={setManualSearch} onChoose={chooseCataloguePhoto} onClose={closeCatalogue}
+      />
     </Suspense>}
     {value && !isProductImageReference(value) && <p className="error-message" role="alert">{tr("Use an HTTPS image link or upload a photo.")}</p>}
     {error && <p className="error-message" role="alert">{error}</p>}

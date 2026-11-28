@@ -9,10 +9,13 @@ test('product photo finder recognizes Sunlight, keeps the product draft and save
   const remoteImage = 'https://images.openproductsfacts.org/images/products/123/456/789/0123/front_en.1.400.jpg';
   const retailerImage = 'https://hemasestore.com/wp-content/uploads/2026/02/Fresh-Mint-30g.webp';
   const raster = readFileSync('public/images/grocery/soap.jpg');
+  const queries: string[] = [];
   await context.route('**/api/product-photos?*', async route => {
     const params = new URL(route.request().url()).searchParams;
     if (params.get('image') === retailerImage) return route.fulfill({body: raster, contentType: 'image/jpeg'});
-    const query = params.get('q');
+    const query = params.get('q') ?? '';
+    queries.push(query);
+    if (query === 'eggs' || query === 'wheat flour') return route.fulfill({json: {photos: []}});
     if (query === 'clogard small') return route.fulfill({json: {photos: [
       {name: 'Clogard Fresh Mint Gel 30G', image: retailerImage, localMarket: true, retailer: {productUrl: 'https://hemasestore.com/product/clogard-fresh-mint-gel-30g/'}},
     ]}});
@@ -45,15 +48,41 @@ test('product photo finder recognizes Sunlight, keeps the product draft and save
 
   await page.getByRole('button', {name: 'Add product', exact: true}).click();
   const product = page.getByRole('dialog', {name: 'Add product', exact: true});
+  const photoName = product.getByLabel('Product name', {exact: true});
+  const gallery = product.getByRole('region', {name: 'Product photo catalogue'});
+  const find = product.getByRole('button', {name: 'Search images', exact: true});
+  await photoName.fill('බිත්තර');
+  await expect(gallery.getByRole('button', {name: /Use photo of (?:Farm|Fresh) eggs/i})).toBeVisible();
+  await expect.poll(() => queries.filter(query => query === 'eggs').length).toBe(1);
+  await find.click();
+  await expect(gallery.getByRole('searchbox')).toHaveValue('බිත්තර');
+  const refinement = gallery.getByRole('searchbox');
+  await refinement.fill('');
+  await expect(refinement).toBeVisible();
+  await photoName.fill('පාන් පිටි');
+  await expect(refinement).toHaveValue('පාන් පිටි');
+  await expect(gallery.getByRole('button', {name: /Use photo of (?:Farm|Fresh) eggs/i})).toHaveCount(0);
+  const flour = gallery.getByRole('button', {name: /Use photo of .*wheat flour/i});
+  await expect(flour).toBeVisible();
+  await expect.poll(() => queries.filter(query => query === 'wheat flour').length).toBe(1);
+  expect(queries.filter(query => query === 'eggs')).toHaveLength(1);
+  const google = gallery.getByRole('link', {name: 'Google Images', exact: true});
+  await expect(google).toHaveAttribute('href', /q=wheat\+flour\+Sri\+Lanka/);
+  await expect(google).toHaveAttribute('target', '_blank');
+  await flour.click();
+  await expect(gallery).toHaveCount(0);
+  await expect(product.getByLabel('Photo URL')).toHaveValue('/images/grocery/flour.jpg');
+  await expect(photoName).toHaveValue('පාන් පිටි');
+  await product.getByRole('button', {name: 'Close dialog', exact: true}).click();
+
+  await page.getByRole('button', {name: 'Add product', exact: true}).click();
   await product.getByLabel('Product name', {exact: true}).fill('sun light');
   const preview = product.getByAltText('Product photo preview', {exact: true});
   await expect(preview).toHaveAttribute('src', '/images/grocery/soap.jpg');
   await product.getByLabel('Selling price (LKR)', {exact: true}).fill('150');
   await product.getByLabel('Opening stock quantity', {exact: true}).fill('8');
-  const find = product.getByRole('button', {name: 'Search images', exact: true});
   await find.click();
   expect(context.pages()).toHaveLength(1);
-  const gallery = product.getByRole('region', {name: 'Product photo catalogue'});
   await expect(gallery.getByRole('searchbox')).toHaveValue('sun light');
   await expect(gallery.getByRole('button', {name: /Use photo of Sunlight Lemon/})).toBeVisible();
   await expect(gallery.getByText('Sun in the sky')).toHaveCount(0);
