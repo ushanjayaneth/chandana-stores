@@ -25,7 +25,7 @@ export function getReceiptDimensions(settings: Settings) {
 
 const amountFormat = new Intl.NumberFormat('en-LK', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const receiptDate = new Intl.DateTimeFormat('en-LK', {
-  year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Colombo',
+  month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Colombo',
 });
 const formatAmount = (value: number) => amountFormat.format((value || 0) / 100);
 const money = (value: number) => 'Rs. ' + formatAmount(value);
@@ -44,15 +44,13 @@ function receiptData(order: Order, branch: Branch, settings: Settings, options: 
   const charges: [string, number][] = [[tr('Subtotal'), order.subtotal]];
   if (itemDiscount) charges.push([tr('Item discounts'), -itemDiscount]);
   if (cartDiscount) charges.push([tr(order.cartDiscount !== undefined || itemDiscount ? 'Cart discount' : 'Discount'), -cartDiscount]);
-  if (order.serviceCharge) charges.push([tr('Service charge'), order.serviceCharge]);
-  if (order.tax) charges.push([tr('Tax'), order.tax]);
+  charges.push([tr('Service charge'), order.serviceCharge], [tr('Tax'), order.tax]);
   const payments = order.payments.filter(payment => payment.method !== 'credit');
   const paid = Math.max(0, order.paid - loan);
-  const settlement: [string, number][] = [];
-  if (payments.length !== 1 || payments[0].amount !== paid) settlement.push([tr('Paid'), paid]);
+  const settlement: [string, number][] = [[tr('Paid'), paid]];
   for (const payment of payments) {
-    settlement.push([tr(paymentLabel[payment.method]), payment.amount]);
-    if (payment.change > 0) settlement.push([tr('Change'), payment.change]);
+    if (payments.length > 1 || payment.method !== 'cash') settlement.push([tr(paymentLabel[payment.method]), payment.amount]);
+    if (payment.change > 0) settlement.push([tr('Cash') + ' · ' + tr('Change'), payment.change]);
   }
   if (loan) settlement.push([tr('Customer Loan'), loan]);
   if (order.refunded > 0) settlement.push([tr('Refunded'), order.refunded]);
@@ -64,11 +62,13 @@ function receiptData(order: Order, branch: Branch, settings: Settings, options: 
     date: receiptDate.format(new Date(order.createdAt)),
     sale: [order.type !== 'dine-in' && 'priceMode' in order ? priceMode : '', saleType, tableName].filter(Boolean).join(' / '),
     orderDetail,
+    paymentStatus: order.paymentStatus === 'refunded' ? tr('Refunded')
+      : loan > 0 ? tr('Customer Loan')
+      : tr(({paid: 'Paid', partial: 'Partial', unpaid: 'Unpaid'} as const)[order.paymentStatus] ?? 'Unpaid'),
     number: order.number,
     lines: order.lines.map(line => ({
       name: locale === 'si' && line.nameSi ? line.nameSi : line.name,
       quantity: line.quantity + ('saleUnit' in line && typeof line.saleUnit === 'string' ? ' ' + tr(line.saleUnit) : ''),
-      unitPrice: line.unitPrice,
       discount: line.discount ?? 0,
       total: line.lineTotal,
       details: itemDetails?.(line) ?? [],
@@ -88,9 +88,8 @@ export function receiptMarkup(order: Order, branch: Branch, settings: Settings, 
   const rows = (lines: [string, number][]) => lines.map(([label, amount]) =>
     '<tr><td>' + esc(label) + '</td><td class="receipt-amount">' + signedMoney(amount) + '</td></tr>').join('');
   const lines = data.lines.map(line =>
-    '<li class="receipt-item"><div class="receipt-item-pricing"><span class="receipt-item-name">' + esc(line.name) + '</span>' +
-    '<strong class="receipt-line-amount receipt-amount">' + money(line.total) + '</strong></div>' +
-    '<div class="receipt-unit">' + esc(line.quantity) + ' × ' + money(line.unitPrice) + '</div>' +
+    '<li class="receipt-item"><div class="receipt-item-pricing"><span class="receipt-item-name">' + esc(line.quantity) + ' × ' + esc(line.name) + '</span>' +
+    '<span class="receipt-line-amount receipt-amount">' + money(line.total) + '</span></div>' +
     (line.discount ? '<small class="receipt-item-detail">' + esc(tr('Item discount −')) + ' ' + money(line.discount) + '</small>' : '') +
     line.details.map(detail => '<small class="receipt-item-detail">' + esc(detail) + '</small>').join('') + '</li>').join('');
   return '<header class="receipt-heading"><h2>' + esc(data.businessName) + '</h2>' +
@@ -98,6 +97,7 @@ export function receiptMarkup(order: Order, branch: Branch, settings: Settings, 
     '<div class="receipt-meta"><div class="receipt-identification"><span>' + esc(tr('Receipt')) + '</span><strong>' + esc(data.number) + '</strong></div>' +
     '<div class="receipt-meta-row"><span>' + esc(tr('Date')) + '</span><span>' + esc(data.date) + '</span></div>' +
     '<div class="receipt-meta-row"><span>' + esc(tr('Service')) + '</span><span>' + esc(data.sale) + '</span></div>' +
+    '<div class="receipt-meta-row"><span>' + esc(tr('Payment')) + '</span><span>' + esc(data.paymentStatus.toUpperCase()) + '</span></div>' +
     (data.orderDetail ? '<div class="receipt-meta-row"><span>' + esc(data.orderDetail[0]) + '</span><span>' + esc(data.orderDetail[1]) + '</span></div>' : '') + '</div>' +
     (demo ? '<p class="receipt-demo">DEMO — SAMPLE DATA</p>' : '') +
     '<div class="receipt-columns"><span>' + esc(tr('Item')) + '</span><span>' + esc(tr('Amount')) + '</span></div>' +
@@ -105,7 +105,8 @@ export function receiptMarkup(order: Order, branch: Branch, settings: Settings, 
     '<section class="receipt-summary"><table><tbody>' + rows(data.charges) + '</tbody></table>' +
     '<div class="receipt-grand-total"><strong>' + esc(tr('Total')) + '</strong><strong class="receipt-amount">' + money(order.total) + '</strong></div>' +
     '<table class="receipt-settlement"><tbody>' + rows(data.settlement) + '</tbody></table></section>' +
-    '<footer class="receipt-footer">' + esc(data.footer) + '</footer>';
+    '<footer class="receipt-footer">' + esc(data.footer) +
+    (demo ? '' : '<small class="receipt-copy">' + esc(tr('COPY · Retain for your records')) + '</small>') + '</footer>';
 }
 
 export function receiptPrintLines(order: Order, branch: Branch, settings: Settings, dimensions: ReceiptDimensions, options: ReceiptOptions = {}): ReceiptLine[] | null {
@@ -120,16 +121,16 @@ export function receiptPrintLines(order: Order, branch: Branch, settings: Settin
       : label + '\n' + value.padStart(width);
   };
   const lines: ReceiptLine[] = [
-    {text: data.businessName, style: 'center'},
+    {text: data.businessName, style: 'title'},
     ...data.contact.map(text => ({text, style: 'center' as const})),
     {text: divider},
     {text: 'RECEIPT\n' + data.number, style: 'center'},
     {text: data.date + '\n' + data.sale, style: 'center'},
+    {text: 'Payment: ' + data.paymentStatus},
     ...(data.orderDetail ? [{text: data.orderDetail.join(' ')}] : []),
     {text: divider},
     ...data.lines.flatMap<ReceiptLine>(line => [
-      {text: line.name},
-      {text: pair(line.quantity + ' x ' + formatAmount(line.unitPrice), line.total), style: 'bold'},
+      {text: pair(line.quantity + ' x ' + line.name, line.total)},
       ...(line.discount ? [{text: pair('Item discount', -line.discount)}] : []),
       ...line.details.map(text => ({text})),
     ]),
@@ -141,6 +142,7 @@ export function receiptPrintLines(order: Order, branch: Branch, settings: Settin
     ...data.settlement.map(([label, amount]) => ({text: pair(label, amount)})),
     {text: divider},
     {text: data.footer, style: 'center'},
+    {text: 'COPY - Retain for your records', style: 'center'},
   ];
   const printable = lines.map(line => ({...line, text: rawText(line.text)}));
   // Use the browser for scripts that the printer's ASCII text mode cannot render.

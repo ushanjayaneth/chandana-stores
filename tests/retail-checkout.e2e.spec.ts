@@ -110,7 +110,7 @@ test('shared POS opens a shift, prints an offline keyboard checkout once and syn
     expect(layout.scrollWidth).toBeLessThanOrEqual(Math.ceil(layout.width));
     expect(layout.title).toBeGreaterThan(layout.base * 1.25);
     expect(layout.title).toBeLessThan(layout.base * 1.55);
-    expect(layout.price).toBeGreaterThanOrEqual(700);
+    expect(layout.price).toBe(500);
     await page.emulateMedia({media: 'screen'});
     await receipt.getByRole('button', {name: 'Close', exact: true}).click();
     await expect(page.getByRole('button', {name: 'Charge order', exact: true})).toBeDisabled();

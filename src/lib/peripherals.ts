@@ -144,13 +144,10 @@ export function escPosText(receipt: string | ReceiptLine[]) {
   if (typeof receipt === 'string') bytes.push(...encoder.encode(sanitize(receipt)), 10);
   else for (const {text, style} of receipt) {
     const centered = style === 'title' || style === 'center';
-    const tall = style === 'title' || style === 'total';
-    const bold = tall || style === 'bold';
+    const bold = style === 'title' || style === 'total' || style === 'bold';
     if (centered) bytes.push(0x1b, 0x61, 1);
     if (bold) bytes.push(0x1b, 0x45, 1);
-    if (tall) bytes.push(0x1d, 0x21, 1);
     bytes.push(...encoder.encode(sanitize(text)), 10);
-    if (tall) bytes.push(0x1d, 0x21, 0);
     if (bold) bytes.push(0x1b, 0x45, 0);
     if (centered) bytes.push(0x1b, 0x61, 0);
   }
