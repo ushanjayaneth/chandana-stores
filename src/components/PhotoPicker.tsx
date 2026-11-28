@@ -1,7 +1,7 @@
 import {useTranslation} from "../lib/language";
 import {lazy, Suspense, useEffect, useId, useImperativeHandle, useRef, useState, type Ref} from 'react';
 import {Camera, ImagePlus, Link, Search, Upload, X} from 'lucide-react';
-import {isProductImageReference, mediaIdFromReference} from '../../shared/media';
+import {isLegacyInlineProductPhoto, isProductImageReference, MAX_PRODUCT_IMAGE_REFERENCE_LENGTH, mediaIdFromReference} from '../../shared/media';
 import {bundledCatalogPhotos, catalogImageUrl, isOnlineCatalogPhoto, matchingCatalogPhotos, photoBarcode, photoQuery, photoSearchTimeoutMs, type CatalogPhoto} from '../../shared/product-photo-catalog';
 import {compressFile} from '../lib/media';
 import {isDeviceWorkspace} from '../lib/workspace-mode';
@@ -18,7 +18,7 @@ export interface PhotoPickerHandle {preparePhoto: () => Promise<string | undefin
 type ProductSearch = {name: string; barcode: string};
 type PhotoSearchResult = {key: string; photos: CatalogPhoto[]; failed: boolean};
 
-export function PhotoPicker({ref, value, onChange, onBusyChange, disabled = false}: {ref?: Ref<PhotoPickerHandle>; value: string; onChange: (value: string) => void; onBusyChange?: (busy: boolean) => void; disabled?: boolean}) {
+export function PhotoPicker({ref, value, onChange, onBusyChange, disabled = false, suggestAutomatically = true}: {ref?: Ref<PhotoPickerHandle>; value: string; onChange: (value: string) => void; onBusyChange?: (busy: boolean) => void; disabled?: boolean; suggestAutomatically?: boolean}) {
   const tr = useTranslation();
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
@@ -39,16 +39,17 @@ export function PhotoPicker({ref, value, onChange, onBusyChange, disabled = fals
   const barcode = manualSearch === null ? photoBarcode(product.barcode) : '';
   const searchKey = JSON.stringify([query, barcode]);
   const validSearch = query.length >= 2 || Boolean(barcode);
-  const showCatalogue = scrollRequest > 0 || manualSearch !== null || (!value && validSearch && closedKey !== searchKey);
+  const showCatalogue = scrollRequest > 0 || manualSearch !== null || (suggestAutomatically && !value && validSearch && closedKey !== searchKey);
   const currentResult = searchResult?.key === searchKey ? searchResult : null;
   const remote = online ? currentResult?.photos ?? [] : [];
   const searchPending = showCatalogue && validSearch && online && !currentResult;
-  const suggestedPhoto = showCatalogue && !value && manualSearch === null && dismissed !== searchKey
+  const suggestedPhoto = suggestAutomatically && showCatalogue && !value && manualSearch === null && dismissed !== searchKey
     ? matchingCatalogPhotos([...bundledCatalogPhotos, ...remote.filter(photo => !photo.related)], query, barcode)[0] ?? null
     : null;
+  const legacyInline = isLegacyInlineProductPhoto(value);
   const preview = value || suggestedPhoto?.image || "";
   const previewPhoto = selectedPhoto ?? suggestedPhoto;
-  const address = selectedPhoto?.image ?? (uploadedReference(value) ? '' : value);
+  const address = selectedPhoto?.image ?? (uploadedReference(value) || legacyInline ? '' : value);
 
   useEffect(() => {
     const form = picker.current?.closest("form");
@@ -149,9 +150,9 @@ export function PhotoPicker({ref, value, onChange, onBusyChange, disabled = fals
   return <div ref={picker} className="photo-picker product-field-full">
     <div className="photo-picker-heading"><span>{tr("Product photo")}</span><small>{tr("Camera, file or image link")}</small></div>
     <div className="photo-picker-content">
-      <div className="photo-picker-preview">{preview && isProductImageReference(preview) ? <ProductPhoto src={preview} alt={tr("Product photo preview")} showCredit referrerPolicy="no-referrer" fallbackSrc={previewPhoto?.retailer || previewPhoto?.commonsPageId ? '/api/product-photos?' + new URLSearchParams({image: preview}) : undefined} onError={() => {if (suggestedPhoto) setDismissed(searchKey);}} /> : <ImagePlus size={28} />}</div>
+      <div className="photo-picker-preview">{preview && (legacyInline || isProductImageReference(preview)) ? <ProductPhoto src={preview} alt={tr("Product photo preview")} showCredit referrerPolicy="no-referrer" fallbackSrc={previewPhoto?.retailer || previewPhoto?.commonsPageId ? '/api/product-photos?' + new URLSearchParams({image: preview}) : undefined} onError={() => {if (suggestedPhoto) setDismissed(searchKey);}} /> : <ImagePlus size={28} />}</div>
       <div className="photo-picker-controls">
-        <label className="photo-picker-link" htmlFor={`${id}-url`}><Link size={14} /><input id={`${id}-url`} className="input" aria-label={tr("Photo URL")} type="text" maxLength={500} placeholder="https://example.com/photo.jpg" value={address} disabled={disabled || busy} onChange={event => {setSelectedPhoto(null); onChange(event.target.value); setError('');}} /></label>
+        <label className="photo-picker-link" htmlFor={`${id}-url`}><Link size={14} /><input id={`${id}-url`} className="input" aria-label={tr("Photo URL")} type="text" maxLength={MAX_PRODUCT_IMAGE_REFERENCE_LENGTH} placeholder="https://example.com/photo.jpg" value={address} disabled={disabled || busy} onChange={event => {setSelectedPhoto(null); onChange(event.target.value); setError('');}} /></label>
         <div className="photo-picker-buttons"><button type="button" className="button button-ghost" disabled={disabled || busy} onClick={() => camera.current?.click()}><Camera size={14} />{tr("Take photo")}</button><button type="button" className="button button-ghost" disabled={disabled || busy} onClick={() => input.current?.click()}><Upload size={14} />{busy ? tr("Preparing photo…") : tr("Choose photo")}</button>
         <button type="button" className="button button-ghost" disabled={disabled || busy} aria-expanded={showCatalogue} onClick={() => {
           if (currentResult?.failed) setSearchResult(null);
@@ -171,7 +172,7 @@ export function PhotoPicker({ref, value, onChange, onBusyChange, disabled = fals
         onSearch={setManualSearch} onChoose={chooseCataloguePhoto} onClose={closeCatalogue}
       />
     </Suspense>}
-    {value && !isProductImageReference(value) && <p className="error-message" role="alert">{tr("Use an HTTPS image link or upload a photo.")}</p>}
+    {value && !legacyInline && !isProductImageReference(value) && <p className="error-message" role="alert">{tr("Use an HTTPS image link or upload a photo.")}</p>}
     {error && <p className="error-message" role="alert">{error}</p>}
   </div>;
 }

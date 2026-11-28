@@ -6,6 +6,8 @@ export interface OfflineCloudEffect {
   id:string;
   branchId:string|null;
   before:Record<string,unknown>|null;
+  /** Menu edits compare an imported photo by digest to keep the sync packet small. */
+  previousPhotoDigest?:string;
   after:Record<string,unknown>|null;
 }
 export interface OfflineCloudCommit {

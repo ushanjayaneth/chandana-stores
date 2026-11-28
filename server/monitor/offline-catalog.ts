@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {isProductImageReference} from '../../shared/media.js';
+import {isWritableProductImageReference} from '../../shared/media.js';
 import type {OfflineCloudEffect} from '../../shared/offline-cloud.js';
 import {staffRecordSchemas} from '../../shared/staff-schema.js';
 
@@ -7,7 +7,7 @@ const id=z.string().min(1).max(160),money=z.number().int().min(0).max(1_000_000_
 const category=z.object({id,name:z.string().trim().min(2).max(80),nameSi:z.string().max(160),icon:z.string().min(1).max(40)}).strict();
 const menu=z.object({
   id,name:z.string().trim().min(2).max(120),nameSi:z.string().max(160),description:z.string().max(500),categoryId:id,
-  price:money.refine(value=>value>0),wholesalePrice:money.optional(),cost:money,image:z.string().max(500).refine(isProductImageReference),available:z.boolean(),stockMode:z.enum(['prepared','recipe','untracked']),
+  price:money.refine(value=>value>0),wholesalePrice:money.optional(),cost:money,image:z.string().refine(isWritableProductImageReference, 'Choose a photo link or upload a product photo.'),available:z.boolean(),stockMode:z.enum(['prepared','recipe','untracked']),
   badge:z.string().max(30).optional(),preparationMinutes:z.number().int().min(0).max(180),barcode:z.string().max(80).optional(),sku:z.string().max(80).optional(),reorderLevel:stock.optional(),saleUnit:z.enum(['pcs','pack','box','kg','g','litre','ml']).optional(),
 }).strict();
 const inventory=z.object({id,branchId:id,name:z.string().min(1).max(120),nameSi:z.string().max(160),category:z.enum(['ingredient','prepared','packaging','resale']),unit:z.string().min(1).max(30),quantity:z.number().finite().min(-1e12).max(1e12),minimum:stock,unitCost:money,supplierId:id.nullable(),menuItemId:id.nullable(),updatedAt:z.iso.datetime(),expiryDate:z.union([z.iso.date(),z.literal('')]).optional()}).strict();
@@ -37,10 +37,12 @@ export function mergeCatalogFields(kind:string,before:Record<string,unknown>,aft
   return next;
 }
 
-export function validateCatalogRecord(kind:string,value:Record<string,unknown>):void {
+export function validateCatalogRecord(kind:string,value:Record<string,unknown>,preserveMenuPhoto=false):void {
   const schema=({category,menu,inventory,recipe,supplier,settings,purchase,production,supplierPayment,...staffRecordSchemas} as Record<string,z.ZodType>)[kind];
   if(!schema)return;
-  const parsed=schema.safeParse(value);
+  // The stored photo carries forward during edits to other fields, including legacy imports.
+  const record=kind==='menu'&&preserveMenuPhoto?{...value,image:'/images/grocery/default.jpg'}:value;
+  const parsed=schema.safeParse(record);
   if(!parsed.success)fail(`Invalid offline ${kind}: ${parsed.error.issues.map(issue=>`${issue.path.join('.')}: ${issue.message}`).join('; ')}`,'INVALID_OFFLINE_RECORD');
   if(kind==='recipe'){
     const lines=value.ingredients as {key:string}[];

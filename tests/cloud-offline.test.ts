@@ -276,3 +276,30 @@ test('concurrent disconnected price edits converge per field regardless of uploa
     assert.equal((await f.current()).records[recordKey('menu','rice')].value.price,13000);
   }
 });
+
+
+test('existing imported product photos survive catalog edits and can be replaced, while new inline images are rejected',async()=>{
+  const initial=baseline(),key=recordKey('menu','rice');
+  const legacy='data:image/jpeg;base64,'+'A'.repeat(6400);
+  initial.records[key].value.image=legacy;
+  const f=await fixture(initial);
+  const d=device(await f.current(),'legacy-photo-device');
+  const {packet}=await d.command('/menu/rice',{price:12500},'PATCH',false);
+  const saved=await f.call('offline-commit',packet);
+  assert.equal(saved.status,200,await saved.text());
+  assert.equal((await f.current()).records[key].value.image,legacy);
+  assert.equal((await f.current()).records[key].value.price,12500);
+
+  const href='https://example.com/photo.jpg?size=large&signature='+'a'.repeat(900);
+  const replacement=await d.command('/menu/rice',{image:href},'PATCH',false);
+  const replaced=await f.call('offline-commit',replacement.packet);
+  assert.equal(replaced.status,200,await replaced.text());
+  assert.equal((await f.current()).records[key].value.image,href);
+
+  const tampered=await d.command('/menu/rice',{price:15000},'PATCH',false);
+  tampered.packet.changes.find(row=>row.kind==='menu')!.after!.image='data:image/png;base64,AA==';
+  const denied=await f.call('offline-commit',tampered.packet);
+  assert.equal(denied.status,409);
+  assert.equal((await denied.json()).code,'INVALID_OFFLINE_RECORD');
+  assert.equal((await f.current()).records[key].value.price,12500);
+});

@@ -13,7 +13,7 @@ export const offlineCommitSchema=z.object({
   sourceId:identifier.regex(/^[A-Za-z0-9_-]+$/),deviceId:identifier.regex(/^[A-Za-z0-9_-]+$/),transactionId:identifier,
   createdAt:z.iso.datetime(),path:z.string().max(300),method:z.enum(['POST','PUT','PATCH','DELETE']),offline:z.boolean().optional(),
   adminGrant:z.string().max(10000).optional(),
-  changes:z.array(z.object({kind:z.enum(CLOUD_MONITOR_KINDS),id:identifier,branchId:identifier.nullable(),before:row.nullable(),after:row.nullable()}).strict()).min(1).max(1000),
+  changes:z.array(z.object({kind:z.enum(CLOUD_MONITOR_KINDS),id:identifier,branchId:identifier.nullable(),before:row.nullable(),after:row.nullable(),previousPhotoDigest:z.string().regex(/^[a-f0-9]{64}$/).optional()}).strict()).min(1).max(1000),
 }).strict();
 const stable=(value:unknown):string=>value===null||typeof value!=='object'?JSON.stringify(value):Array.isArray(value)?`[${value.map(stable).join(',')}]`:`{${Object.keys(value).sort().map(key=>`${JSON.stringify(key)}:${stable((value as Record<string,unknown>)[key])}`).join(',')}}`;
 const equal=(a:unknown,b:unknown)=>stable(a)===stable(b);
@@ -136,10 +136,15 @@ export function applyOfflineCommit(projection:Projection,input:OfflineCloudCommi
     check(allowedKinds.has(effect.kind),'This kind of record cannot be changed by offline billing.','OFFLINE_OPERATION_FORBIDDEN');
     check(routeKinds.has(effect.kind),'An offline command contains unrelated record changes.','OFFLINE_OPERATION_FORBIDDEN');
     check(effect.after!==null||effect.kind==='category'&&input.method==='DELETE','Offline billing cannot delete business history.','OFFLINE_OPERATION_FORBIDDEN');
+    const menuUpdate=effect.kind==='menu'&&input.method==='PATCH'&&Boolean(effect.before&&effect.after);
+    if(effect.previousPhotoDigest)check(menuUpdate&&!Object.hasOwn(effect.before!,'image'),
+      'The saved product photo reference is invalid.','INVALID_OFFLINE_RECORD');
     for(const value of [effect.before,effect.after])if(value){
       check(effect.kind==='settings'?effect.id==='settings':value.id===effect.id,'Offline record identity does not match.','INVALID_OFFLINE_RECORD');
       check((value.branchId??null)===effect.branchId,'Offline record branch does not match.','INVALID_OFFLINE_RECORD');
-      validateCatalogRecord(effect.kind,value);
+      const preservePhoto=menuUpdate&&(value===effect.before|| (effect.previousPhotoDigest
+        ? !Object.hasOwn(value,'image') : equal(value.image,effect.before!.image)));
+      validateCatalogRecord(effect.kind,value,preservePhoto);
     }
     if(effect.branchId)check(get('branch',effect.branchId),'The branch for this offline transaction no longer exists.');
     if(effect.kind==='order'){
@@ -215,7 +220,16 @@ export function applyOfflineCommit(projection:Projection,input:OfflineCloudCommi
           if(balance<0)warn('Supplier payments from offline devices exceeded the outstanding balance. All payments were preserved; review the supplier account.');
           put(effect,{...current!,balance:Math.max(0,balance)});
         }else {
-          const merged=mergeFields(effect,current!);validateCatalogRecord(effect.kind,merged);put(effect,merged);
+          let edit=effect;
+          if(effect.previousPhotoDigest){
+            const photo=current!.image;
+            const previous=typeof photo==='string'&&createHash('sha256').update(photo).digest('hex')===effect.previousPhotoDigest
+              ? photo : effect.previousPhotoDigest;
+            edit={...effect,before:{...before,image:previous},after:Object.hasOwn(after,'image')?after:{...after,image:previous}};
+          }
+          const merged=mergeFields(edit,current!);
+          validateCatalogRecord(effect.kind,merged,effect.kind==='menu'&&equal(merged.image,current!.image));
+          put(effect,merged);
         }
       }
       continue;

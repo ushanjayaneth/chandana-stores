@@ -26,7 +26,7 @@ import type { Category, MenuItem } from "../../shared/types";
 import { usePOS } from "../lib/context";
 import { commandId, money, number } from "../lib/format";
 import { useBackLayer } from "../lib/navigation";
-import { isProductImageReference } from "../../shared/media";
+import { isWritableProductImageReference } from "../../shared/media";
 import { productStockState } from "../../shared/stock";
 import PhotoPicker, {type PhotoPickerHandle} from "../components/PhotoPicker";
 import ProductPhoto from "../components/ProductPhoto";
@@ -46,12 +46,14 @@ function Dialog({
   children,
   onClose,
   busy = false,
+  dismissOnBackdrop = true,
 }: {
   title: string;
   subtitle: string;
   children: ReactNode;
   onClose: () => void;
   busy?: boolean;
+  dismissOnBackdrop?: boolean;
 }) {
   const tr = useTranslation();
   const closeRef = useRef(onClose);
@@ -109,7 +111,7 @@ function Dialog({
     <div
       className="modal-backdrop"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !busy) onClose();
+        if (dismissOnBackdrop && event.target === event.currentTarget && !busy) onClose();
       }}
     >
       <section
@@ -322,7 +324,7 @@ export function ProductDialog({
       price: cents("price"),
       ...(!item || enteredCost !== null || stockMode !== product?.stockMode ? {cost: previewCost} : {}),
       wholesalePrice:cents("wholesalePrice"),
-      image: image.trim() || "/images/grocery/default.jpg",
+      ...(!item || image !== item.image ? {image: image.trim() || "/images/grocery/default.jpg"} : {}),
       available: fields.get("enabled") === "on",
       stockMode,
       saleUnit:stockUnit,
@@ -335,7 +337,7 @@ export function ProductDialog({
       setError(tr("Choose or create a category first."));
       return;
     }
-    if (!isProductImageReference(payload.image)) {
+    if (payload.image !== undefined && !isWritableProductImageReference(payload.image)) {
       setError(tr("Use an HTTPS image link or upload a product photo."));
       return;
     }
@@ -411,6 +413,7 @@ export function ProductDialog({
         subtitle={tr("Menu details apply across branches. Stock quantities apply to the selected branch.")}
         onClose={onClose}
         busy={busy || photoBusy}
+        dismissOnBackdrop={!item}
       >
         <form onSubmit={submit}>
           <div className="form-grid">
@@ -535,7 +538,7 @@ export function ProductDialog({
               />
               <small className="product-field-help">{tr("Alert at this quantity or below. Leave blank to use 5 units.")}</small>
             </Field>
-            <PhotoPicker ref={photoPicker} value={image} onChange={setImage} onBusyChange={setPhotoBusy} disabled={busy} />
+            <PhotoPicker ref={photoPicker} value={image} onChange={setImage} onBusyChange={setPhotoBusy} disabled={busy} suggestAutomatically={!item} />
             <Field label={tr("Description (optional)")} full>
               <textarea
                 className="input"

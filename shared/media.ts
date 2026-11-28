@@ -3,6 +3,9 @@ import {photoCatalogs, photoBarcode, type CatalogPhotoCredit} from './product-ph
 /** Product photos are immutable, small raster records, shared by both databases. */
 export const MAX_MEDIA_BYTES = 700_000;
 export const MAX_MEDIA_DIMENSION = 4096;
+export const MAX_PRODUCT_IMAGE_REFERENCE_LENGTH = 4096;
+
+export const isLegacyInlineProductPhoto = (value: string) => /^data:image\/(?:jpeg|png|webp);base64,/i.test(value);
 export type ProductImageMime = 'image/jpeg' | 'image/png' | 'image/webp';
 export interface MediaInput {
   id: string;
@@ -22,6 +25,9 @@ export function isProductImageReference(value: string): boolean {
   if (/^\/images\/[a-zA-Z0-9_./-]+$/.test(value) && !value.includes('..')) return true;
   try {const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password;} catch {return false;}
 }
+export const isWritableProductImageReference = (value: string) =>
+  value.length <= MAX_PRODUCT_IMAGE_REFERENCE_LENGTH && isProductImageReference(value);
+
 export function mediaIdFromReference(reference: string): string | null {
   const match = /^(?:local-image:|\/api\/media\/)(media-[a-zA-Z0-9-]{8,100})$/.exec(reference);
   return match?.[1] ?? null;

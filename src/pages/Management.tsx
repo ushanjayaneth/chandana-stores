@@ -97,11 +97,13 @@ function Modal({
   subtitle,
   children,
   close,
+  dismissOnBackdrop = true,
 }: {
   title: string;
   subtitle?: string;
   children: ReactNode;
   close: () => unknown;
+  dismissOnBackdrop?: boolean;
 }) {
   const tr = useTranslation();
   const closeRef = useRef(close);
@@ -144,7 +146,7 @@ function Modal({
     <div
       className="modal-backdrop"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) close();
+        if (dismissOnBackdrop && event.target === event.currentTarget) close();
       }}
     >
       <section
@@ -2818,6 +2820,7 @@ export default function Management({ page }: { page: Page }) {
       {page === "production" && menuCatalog}
       {dialog && (
         <Modal
+          dismissOnBackdrop={dialog !== "menu" || !editingMenu}
           title={
             dialog === "customer-ledger"
               ? tr("Customer ledger & collection")
@@ -3047,8 +3050,9 @@ export default function Management({ page }: { page: Page }) {
               onSubmit={(event) =>
                 submit(
                   event,
-                  async (fields) =>
-                    mutate(
+                  async (fields) => {
+                    const preparedPhoto = await photoPicker.current?.preparePhoto();
+                    return mutate(
                       editingMenu ? `/menu/${editingMenu.id}` : "/menu",
                       {
                         commandId: formCommandId,
@@ -3057,7 +3061,9 @@ export default function Management({ page }: { page: Page }) {
                         categoryId: value(fields, "categoryId"),
                         price: minor(fields.get("price")),
                         cost: minor(fields.get("cost")),
-                        image:(await photoPicker.current?.preparePhoto()) || menuPhoto || "/images/chicken-rice.jpg",
+                        ...(preparedPhoto || !editingMenu || menuPhoto !== editingMenu.image
+                          ? {image: preparedPhoto || menuPhoto.trim() || "/images/chicken-rice.jpg"}
+                          : {}),
                         stockMode: menuStockMode,
                         available: fields.get("available") === "on",
                         preparationMinutes: Number(
@@ -3066,7 +3072,8 @@ export default function Management({ page }: { page: Page }) {
                         badge: value(fields, "badge") || undefined,
                       },
                       editingMenu ? "PATCH" : "POST",
-                    ),
+                    );
+                  },
                   editingMenu ? "Menu item updated" : "Menu item created",
                 )
               }
@@ -3156,7 +3163,7 @@ export default function Management({ page }: { page: Page }) {
                     placeholder={tr("e.g. Popular")}
                   />
                 </Field>
-                <PhotoPicker ref={photoPicker} value={menuPhoto} onChange={setMenuPhoto} onBusyChange={setMenuPhotoBusy} disabled={busy}/>
+                <PhotoPicker ref={photoPicker} value={menuPhoto} onChange={setMenuPhoto} onBusyChange={setMenuPhotoBusy} disabled={busy} suggestAutomatically={!editingMenu}/>
                 <Field label={tr("Description")} full>
                   <textarea
                     className="input"

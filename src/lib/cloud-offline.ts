@@ -1,7 +1,8 @@
+import Dexie from 'dexie';
 import {ZodError} from 'zod';
 import type {CloudKind} from '../../shared/cloud-monitor';
 import {supportsOfflineCloudCommand, type OfflineCloudCommit, type OfflineCloudEffect, type OfflineCloudResult, type OfflineCloudState} from '../../shared/offline-cloud';
-import {assertMediaPayload, sameMedia, type MediaRecord} from '../../shared/media';
+import {assertMediaPayload, isWritableProductImageReference, sameMedia, type MediaRecord} from '../../shared/media';
 import type {Snapshot, User} from '../../shared/types';
 import {LocalDatabase, LocalStore} from './local/db';
 import {createLocalCredential, verifyLocalPin} from './local/auth';
@@ -20,7 +21,7 @@ import {isAdminOperation} from '../../shared/admin-access';
 export type CloudOfflineState = OfflineCloudState;
 export type CloudOfflineChange = OfflineCloudEffect;
 export type CloudOfflineCommit = OfflineCloudCommit;
-interface PendingCommit {sequence: number; commit: CloudOfflineCommit}
+interface PendingCommit {sequence: number; commit: CloudOfflineCommit; previousMenuPhoto?: {id: string; image: string}}
 interface ReplicaState {cloudVersion: number; cachedAt: string; lastSync: string | null; lastError: string; warnings?: string[]}
 export interface CloudOfflineStatus {
   ready: boolean;
@@ -329,11 +330,21 @@ export class CloudOfflineReplica {
         requireLocal(result !== undefined, 'This action needs an internet connection.', 503, 'ONLINE_REQUIRED');
         const createdAt = now(), sequence = ((await store.meta<number>('journalSequence')) ?? 0) + 1;
         const changes = await store.effects();
+        const menuEdit = changes.find(change => change.kind === 'menu' && change.before && change.after);
+        let previousMenuPhoto: PendingCommit['previousMenuPhoto'];
+        const previousImage = menuEdit?.before?.image;
+        if (menuEdit && typeof previousImage === 'string' && !isWritableProductImageReference(previousImage)) {
+          // Keep the original for rollback without sending a large embedded image twice.
+          previousMenuPhoto = {id: menuEdit.id, image: previousImage};
+          menuEdit.previousPhotoDigest = await Dexie.waitFor(sha256(previousImage));
+          delete menuEdit.before!.image;
+          if (menuEdit.after!.image === previousImage) delete menuEdit.after!.image;
+        }
         const grant=isAdminOperation(path,method,payload)?adminGrant(this.sourceId):undefined;
         const commit: CloudOfflineCommit = {sourceId: this.sourceId, deviceId: (await store.meta<string>('deviceId'))!, transactionId: commandId, createdAt, path, method, changes, offline: options.offline ?? (typeof navigator !== 'undefined' && navigator.onLine === false),...(grant?{adminGrant:grant}:{})};
         requireLocal(changes.length <= 1000 && new TextEncoder().encode(JSON.stringify(commit)).length <= 690_000, path === '/media' ? 'This photo is too large to sync safely. Choose a smaller photo.' : 'This transaction is too large to queue safely. Split it into smaller transactions.', 413, 'OFFLINE_PACKET_TOO_LARGE');
         await this.db.metadata.put({key: 'journalSequence', value: sequence});
-        await this.db.metadata.put({key: `${outboxPrefix}${commandId}`, value: {sequence, commit} satisfies PendingCommit});
+        await this.db.metadata.put({key: `${outboxPrefix}${commandId}`, value: {sequence, commit, ...(previousMenuPhoto ? {previousMenuPhoto} : {})} satisfies PendingCommit});
         await this.db.journal.put({id: uid('journal'), sequence, commandId, actor: user.id, action: `${method} ${path}`, branchId: typeof payload.branchId === 'string' ? payload.branchId : changes.find(change => change.branchId)?.branchId ?? user.branchId, createdAt, changes: store.changes});
         await this.db.commands.put({id: commandId, actor: user.id, hash, response: result, createdAt});
         return result;
@@ -364,7 +375,9 @@ export class CloudOfflineReplica {
         else {
           const existing = await this.db.records.get([effect.kind, effect.id]);
           const timestamp = now();
-          await this.db.records.put({kind: effect.kind, id: effect.id, branchId: typeof effect.before.branchId === 'string' ? effect.before.branchId : effect.branchId, value: effect.before, createdAt: existing?.createdAt ?? timestamp, updatedAt: timestamp});
+          const originalPhoto = effect.kind === 'menu' && pending.previousMenuPhoto?.id === effect.id ? pending.previousMenuPhoto : undefined;
+          const value = originalPhoto ? {...effect.before, image: originalPhoto.image} : effect.before;
+          await this.db.records.put({kind: effect.kind, id: effect.id, branchId: typeof effect.before.branchId === 'string' ? effect.before.branchId : effect.branchId, value, createdAt: existing?.createdAt ?? timestamp, updatedAt: timestamp});
         }
       }
       await this.db.commands.delete(commandId);

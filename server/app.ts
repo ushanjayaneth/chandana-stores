@@ -14,7 +14,7 @@ import { initializeBusiness, registerBusinessRoutes, creditBalance, draftSchema,
 import { renderReceipt } from './receipt';
 import { listSystemPrinters, probeNetworkPrinter } from './peripherals';
 import {registerMediaRoutes} from './media';
-import {isProductImageReference} from '../shared/media';
+import {isWritableProductImageReference} from '../shared/media';
 import { productCost, weightedUnitCost } from '../shared/costing';
 import { productStockState } from '../shared/stock';
 import {registerStaffRoutes} from './staff';
@@ -400,7 +400,7 @@ export async function createApp(options: AppOptions = {}) {
       const customer:Customer={id:uid('customer'),name:body.name,phone:body.phone,email:body.email,visits:0,spent:0,balance:0,points:0,createdAt:now()};store.put('customer',customer);audit(user,branchId,'customer.created',body.name);return {ok:true,customer};
     });
   });
-  const menuSchema=z.object({name:z.string().trim().min(2).max(120),nameSi:z.string().max(160).default(''),description:z.string().max(500).default(''),categoryId:id,price:amount,wholesalePrice:money.optional(),cost:money.default(0),image:z.string().max(500).refine(x=>isProductImageReference(x)&&!x.startsWith('local-image:'),'Choose a photo link or upload a product photo.'),available:z.boolean().default(true),stockMode:z.enum(['prepared','recipe','untracked']),saleUnit:z.enum(['pcs','pack','box','kg','g','litre','ml']).optional(),badge:z.string().max(30).optional(),preparationMinutes:z.number().int().min(0).max(180).default(10),barcode:z.string().trim().max(80).regex(/^[A-Za-z0-9 ._\/-]*$/).optional(),sku:z.string().trim().max(80).regex(/^[A-Za-z0-9 ._\/-]*$/).transform(x=>x.toUpperCase()).optional(),reorderLevel:z.number().finite().min(0).max(100000).optional()});
+  const menuSchema=z.object({name:z.string().trim().min(2).max(120),nameSi:z.string().max(160).default(''),description:z.string().max(500).default(''),categoryId:id,price:amount,wholesalePrice:money.optional(),cost:money.default(0),image:z.string().refine(x=>isWritableProductImageReference(x)&&!x.startsWith('local-image:'),'Choose a photo link or upload a product photo.'),available:z.boolean().default(true),stockMode:z.enum(['prepared','recipe','untracked']),saleUnit:z.enum(['pcs','pack','box','kg','g','litre','ml']).optional(),badge:z.string().max(30).optional(),preparationMinutes:z.number().int().min(0).max(180).default(10),barcode:z.string().trim().max(80).regex(/^[A-Za-z0-9 ._\/-]*$/).optional(),sku:z.string().trim().max(80).regex(/^[A-Za-z0-9 ._\/-]*$/).transform(x=>x.toUpperCase()).optional(),reorderLevel:z.number().finite().min(0).max(100000).optional()});
   const requireProductPhoto=(image?:string)=>{if(image?.startsWith('/api/media/'))requireThat(store.get('media',image.slice('/api/media/'.length)),'Upload this product photo before saving the product.',404);};
   app.post('/api/menu',async request=>{
     const user=getUser(request);permit(user,management);const body=menuSchema.extend({commandId:command.optional()}).parse(request.body);const branchId=user.branchId??'b1';requireProductPhoto(body.image);

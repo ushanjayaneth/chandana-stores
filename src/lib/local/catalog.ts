@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import {isProductImageReference,mediaIdFromReference} from '../../../shared/media.js';
+import {isWritableProductImageReference,mediaIdFromReference} from '../../../shared/media.js';
 import { weightedUnitCost } from '../../../shared/costing.js';
 import type { AuditEvent, Category, CreditEntry, Customer, Expense, InventoryItem, MenuItem, Order, ProductionBatch, Purchase, Recipe, Role, Settings, StaffMember, StockMovement, Supplier, User } from '../../../shared/types.js';
 import { now, uid, requireLocal, permitLocal, scopeLocal, type LocalRequest } from './types.js';
@@ -23,7 +23,7 @@ const defaults = { receiptPaperWidthMm: 80, receiptContentWidthMm: 72, receiptMa
 const categorySchema = z.object({ commandId: command, name: z.string().trim().min(2).max(80), icon: z.string().trim().min(1).max(40).default('package') });
 const menuSchema = z.object({
   name: z.string().trim().min(2).max(120), nameSi: z.string().max(160).default(''), description: z.string().max(500).default(''), categoryId: id,
-  price: positiveMoney, wholesalePrice:money.optional(), cost: money.default(0), image: z.string().max(500).refine(isProductImageReference, 'Choose a photo link or upload a product photo.'),
+  price: positiveMoney, wholesalePrice:money.optional(), cost: money.default(0), image: z.string().refine(isWritableProductImageReference, 'Choose a photo link or upload a product photo.'),
   available: z.boolean().default(true), stockMode: z.enum(['prepared', 'recipe', 'untracked']), saleUnit:z.enum(['pcs','pack','box','kg','g','litre','ml']).optional(), badge: z.string().max(30).optional(), preparationMinutes: z.number().int().min(0).max(180).default(0),
   barcode: z.string().trim().max(80).regex(/^[A-Za-z0-9 ._/-]*$/).optional(), sku: z.string().trim().max(80).regex(/^[A-Za-z0-9 ._/-]*$/).transform(value => value.toUpperCase()).optional(), reorderLevel: stockQuantity.default(5),
 });

@@ -324,3 +324,22 @@ test('reverified online PIN replaces the old offline credential and explicit rev
     assert.equal((await f.replica.status()).pending, 1); assert.equal(await f.db.records.where('kind').equals('order').count(), 1);
   } finally {await f.destroy();}
 });
+
+
+test('large imported photos stay out of editable menu packets but remain available for rollback', async () => {
+  const f = await fixture();
+  const legacyPhoto = 'data:image/jpeg;base64,' + 'A'.repeat(800_000);
+  try {
+    f.state.records.find(row => row.kind === 'menu' && row.id === 'm1')!.value.image = legacyPhoto;
+    await f.replica.cache(f.state, owner);
+    const commandId = id();
+    await f.replica.api('/menu/m1', {commandId, image: '/images/grocery/eggs.jpg'}, 'PATCH');
+    const pending = (await f.db.metadata.get(`cloudOffline:outbox:${commandId}`))!.value as {commit: OfflineCloudCommit};
+    const effect = pending.commit.changes.find(row => row.kind === 'menu')!;
+    assert.equal(effect.before!.image, undefined);
+    assert.match(effect.previousPhotoDigest!, /^[a-f0-9]{64}$/);
+    assert.equal(effect.after!.image, '/images/grocery/eggs.jpg');
+    assert.equal(await f.replica.rollback(commandId), true);
+    assert.equal(((await f.db.records.get(['menu', 'm1']))!.value as MenuItem).image, legacyPhoto);
+  } finally {await f.destroy();}
+});
